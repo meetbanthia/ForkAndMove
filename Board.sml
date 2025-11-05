@@ -1,10 +1,17 @@
-structure  BoardRep:
+(*Can be optimized for parallelism *)
+
+structure  Board:
 sig
-    val board_to_bitmaps: (char array array) -> (Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word)
-    val initiate_standard_chess: unit -> (Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word)
+    type brep = (Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word)
+    val board_to_bitmaps: (char array array) -> brep
+    val initiate_standard_chess: unit -> brep
+
+
+    (*This is only for verification purpose*)
     val print_bit_map: unit -> unit
 end =
 struct
+    type brep = (Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word)
 
     (* This function convert any chess board to
     bitmaps for each type of pieces of white and black *)
@@ -74,6 +81,7 @@ struct
         in
             board_to_bitmaps chessboard
         end
+
 
 
     (* this function initialises the chess board, and calculates its bitmaps
