@@ -5,6 +5,7 @@ sig
     type brep = (Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word)
     val board_to_bitmaps: (char array array) -> brep
     val initiate_standard_chess: unit -> brep
+    val give_piece_bitmap: brep -> char -> Word64.word
 
 
     (*This is only for verification purpose*)
@@ -132,4 +133,23 @@ struct
         in
             display_board 0
         end
+
+    fun give_piece_bitmap bmaps c =
+        let 
+            val (P, R, N, B, K, Q, p, r, n, b, k, q) = bmaps 
+        in
+            case c of 
+                #"P" => P
+                | #"R" => R
+                | #"N" => N
+                | #"B" => B
+                | #"K" => K
+                | #"Q" => Q
+                | #"p" => p
+                | #"r" => r
+                | #"n" => n
+                | #"b" => b
+                | #"k" => k
+                | #"q" => q
+                | _ => (Word64.fromInt 0)
 end
