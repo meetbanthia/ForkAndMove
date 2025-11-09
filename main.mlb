@@ -1,4 +1,5 @@
 lib/github.com/mpllang/mpllib/sources.mpl.mlb
 lib-local/sources.mpl.mlb
-BoardRep.sml
+Board.sml
+MoveGenerator.sml
 main.sml
