@@ -114,8 +114,8 @@ end = struct
             val n2 = Word64.<< (Word64.andb(n, note_h_file), Word.fromInt 17)
             val n3 = Word64.<< (Word64.andb(n, not_ab_file), Word.fromInt 6)
             val n4 = Word64.<< (Word64.andb(n, not_gh_file), Word.fromInt 10)
-            val n5 = Word64.andb(Word64.>> (n, Word.fromInt 15), not_a_file)
-            val n6 = Word64.andb(Word64.>> (n, Word.fromInt 17), note_h_file)
+            val n5 = Word64.andb(Word64.>> (n, Word.fromInt 15), note_h_file)
+            val n6 = Word64.andb(Word64.>> (n, Word.fromInt 17), not_a_file)
             val n7 = Word64.andb(Word64.>> (n, Word.fromInt 6), not_ab_file)
             val n8 = Word64.andb(Word64.>> (n, Word.fromInt 10), not_gh_file)
             val moves = Word64.orb(n1,
@@ -147,9 +147,9 @@ end = struct
             val blockers = Word64.orb(ooc_white, occ_black)
             val own = if isWhite then ooc_white else occ_black
             val moves = Word64.orb(
-                slide north not_lr_rank b blockers,
+                slide north not_fr_rank b blockers,
                 Word64.orb(
-                    slide south not_fr_rank b blockers,
+                    slide south not_lr_rank b blockers,
                     Word64.orb(
                         slide east note_h_file b blockers,
                         slide west not_a_file b blockers
