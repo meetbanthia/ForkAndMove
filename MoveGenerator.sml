@@ -1,12 +1,10 @@
-(* structure MoveGenerator : sig
-    type move = ((int*int) * (int*int) * real)
+structure MoveGenerator : sig
+    type move = ((int*int) * (int*int))
     val generate_move_order: Board.brep -> move list
     val apply_move : Board.brep -> move -> Board.brep
-end = struct
-
-    type move = ((int*int) * (int*int) * real)
-    type bitboard = Word64.word
-    open Board
+end = 
+struct
+    type move = ((int*int) * (int*int))
 
     (* --- Bitboard masks --- *)
 
@@ -63,8 +61,8 @@ end = struct
     
 
     (* --- Convert bit index to (row,col) --- *)
-    fun indexToCoord i = (i div 8, i mod 8)
-    fun coord_to_index (r,c) = r*8 + c
+    fun indexToCoord i = (7 - (i div 8), 7 - (i mod 8))
+    fun coord_to_index (r,c) = (7-r)*8 + (7-c)
 
     (* --- Get occupancy bitboards --- *)
     fun occupancy (P,R,N,B,K,Q,p,r,n,b,k,q) =
@@ -210,7 +208,7 @@ end = struct
                       val bb = Word64.<< (0w1, Word.fromInt idx)
                       val targets = if isWhite then white_pawn_moves bb ooc_white occ_black
                                     else black_pawn_moves bb ooc_white occ_black
-                      val moves = List.map (fn t => (sq,t,1.0)) (bitboard_to_moves targets)
+                      val moves = List.map (fn t => (sq,t)) (bitboard_to_moves targets)
                   in aux rest (moves @ acc) end
         in aux squares [] end
 
@@ -223,7 +221,7 @@ end = struct
                       val idx = coord_to_index sq
                       val bb = Word64.<< (0w1, Word.fromInt idx)
                       val targets = knight_moves bb occOwn
-                      val moves = List.map (fn t => (sq,t,1.0)) (bitboard_to_moves targets)
+                      val moves = List.map (fn t => (sq,t)) (bitboard_to_moves targets)
                   in aux rest (moves @ acc) end
         in aux squares [] end
 
@@ -236,7 +234,7 @@ end = struct
                       val idx = coord_to_index sq
                       val bb = Word64.<< (0w1, Word.fromInt idx)
                       val targets = pieceFunc bb ooc_white occ_black isWhite
-                      val moves = List.map (fn t => (sq,t,1.0)) (bitboard_to_moves targets)
+                      val moves = List.map (fn t => (sq,t)) (bitboard_to_moves targets)
                   in aux rest (moves @ acc) end
         in aux squares [] end
 
@@ -249,7 +247,7 @@ end = struct
                       val idx = coord_to_index sq
                       val bb = Word64.<< (0w1, Word.fromInt idx)
                       val targets = king_moves bb occOwn
-                      val moves = List.map (fn t => (sq,t,1.0)) (bitboard_to_moves targets)
+                      val moves = List.map (fn t => (sq,t)) (bitboard_to_moves targets)
                   in aux rest (moves @ acc) end
         in aux squares [] end
 
@@ -280,7 +278,7 @@ end = struct
         generate_piece_moves brep
 
     (* --- Apply move --- *)
-    fun apply_move brep ((fromR,fromC),(toR,toC),_) =
+    fun apply_move brep ((fromR,fromC),(toR,toC)) =
         let
             val (P,R,N,B,K,Q,p,r,n,b,k,q) = brep
             fun update bb from_index to_index =
@@ -304,4 +302,4 @@ end = struct
             (P',R',N',B',K',Q',p',r',n',b',k',q')
         end
 
-end *)
+end

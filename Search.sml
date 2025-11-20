@@ -3,14 +3,12 @@ This is where parallelism comes into consideration*)
 
 structure  Search:
 sig
-    type move
     val eval_position: Board.brep -> real
 
-(* node depth maximizingPlayer alpha beta evaluate apply_move *)
-    val alpha_beta_search: Board.brep -> int -> bool -> real -> real -> (Board.brep -> real) -> (Board.brep -> int -> Board.brep) -> real
+(* node depth maximizingPlayer alpha beta evaluate *)
+    val alpha_beta_search: Board.brep -> int -> bool -> real -> real -> (Board.brep -> real) -> real
 end =
 struct
-    type move = ((int*int) * (int*int))
 
     fun set_bit_only i =
         let val setbit0 = Word64.fromInt 1
@@ -82,17 +80,19 @@ struct
             end 
     *)
     
-    fun alpha_beta_search node depth maximizingPlayer alpha beta evaluate apply_move =
+    fun alpha_beta_search node depth maximizingPlayer alpha beta evaluate =
         if depth = 0 then evaluate node
         else
-            let                
+            let   
+                val moves = Seq.fromList (MoveGenerator.generate_move_order node)
+                val child_nodes = Seq.map (fn(x) => MoveGenerator.apply_move node x) moves            
                 fun loop node i alpha beta maximizingPlayer =
-                    if beta <= alpha then 
+                    if i >= (Seq.length child_nodes) orelse beta <= alpha then 
                         if maximizingPlayer then Real.negInf else Real.posInf
                     else
                         let
-                            val child_node = apply_move node i
-                            val score = alpha_beta_search child_node (depth-1) (not maximizingPlayer) alpha beta evaluate apply_move
+                            val child_node = Seq.nth child_nodes i
+                            val score = alpha_beta_search child_node (depth-1) (not maximizingPlayer) alpha beta evaluate
                             val (a, b) = if maximizingPlayer then (Real.max(alpha, score),beta) else (alpha, Real.min(beta, score))
                             val f = if maximizingPlayer then Real.max else Real.min
                         in
@@ -102,7 +102,18 @@ struct
                 loop node 0 alpha beta maximizingPlayer
             end
 
-    (* fun pvs_search node depth maximizingPlayer alpha beta evaluate apply_move = *)
-
-
+    fun pvs_search node depth maximizingPlayer alpha beta evaluate =
+        if depth = 0 then evaluate node
+        else
+            let
+                val moves = Seq.fromList (MoveGenerator.generate_move_order node)
+                val child_nodes = Seq.map (fn(x) => MoveGenerator.apply_move node x) moves
+                val left_most_node = Seq.nth child_nodes 0
+                val score1 = pvs_search left_most_node (depth-1) (not maximizingPlayer) alpha beta evaluate
+                val rest_scores = Seq.map (fn(x) => alpha_beta_search x (depth-1) (not maximizingPlayer) alpha beta evaluate) child_nodes
+                val (a,b) = if maximizingPlayer then (Real.max(score1,alpha), beta) else (alpha, Real.min(beta, score1))
+                val f = if maximizingPlayer then Real.max else Real.min
+            in
+                Parallel.reduce (fn(a,b) => f(a,b)) (Real.fromInt 0) (1,Seq.length child_nodes) (fn(i) => Seq.nth rest_scores i)
+            end
 end

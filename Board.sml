@@ -9,6 +9,7 @@ sig
 
     (*This is only for verification purpose*)
     val print_bit_map: unit -> unit
+    val print_board: brep -> unit
 end =
 struct
     type brep = (Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word * Word64.word)
@@ -134,6 +135,45 @@ struct
                     end
         in
             display_board 0
+        end
+
+
+    fun print_board (P, R, N, B, K, Q, p, r, n, b, k, q) =
+        let
+            (* Helper function to check if a specific bit is set in a bitmap *)
+            fun is_set (bitmap, idx) =
+                Word64.compare (Word64.andb (bitmap, Word64.<< (Word64.fromInt 1, Word.fromInt idx)), Word64.fromInt 0) <> EQUAL
+
+            (* Function to display the board row by row, as was done in the original print_bit_map *)
+            fun display_board i =
+                if i >= 64 then ()
+                else
+                    let
+                        val row = 7 - (i div 8)  (* Calculate row from index *)
+                        val col = 7 - (i mod 8)  (* Calculate column from index *)
+                        (* Determine which piece is in this position *)
+                        val piece_char =
+                            if is_set (P, i) then #"P"
+                            else if is_set (R, i) then #"R"
+                            else if is_set (N, i) then #"N"
+                            else if is_set (B, i) then #"B"
+                            else if is_set (K, i) then #"K"
+                            else if is_set (Q, i) then #"Q"
+                            else if is_set (p, i) then #"p"
+                            else if is_set (r, i) then #"r"
+                            else if is_set (n, i) then #"n"
+                            else if is_set (b, i) then #"b"
+                            else if is_set (k, i) then #"k"
+                            else if is_set (q, i) then #"q"
+                            else #" "  (* Empty space *)
+
+                        val _ = print (Char.toString(piece_char) ^ " ")  (* Print the piece character with a space *)
+                        val _ = if col = 7 then print("\n") else ()  (* Print a new line at the end of the row *)
+                    in
+                        display_board (i + 1)  (* Recur for the next position *)
+                    end
+        in
+            display_board 0  (* Start from the first position (index 0) *)
         end
 
     fun give_piece_bitmap bmaps c =
