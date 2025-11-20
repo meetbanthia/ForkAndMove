@@ -6,7 +6,6 @@ end = struct
 
     type move = ((int*int) * (int*int) * real)
     type bitboard = Word64.word
-    open Board
 
     (* --- Bitboard masks --- *)
 
