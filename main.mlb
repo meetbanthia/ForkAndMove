@@ -4,4 +4,6 @@ Board.sml
 MoveGenerator.sml
 PieceList.sml
 MoveGeneratorPL.sml
+PieceTable.sml
+Search.sml
 main.sml

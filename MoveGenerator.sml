@@ -1,11 +1,11 @@
 structure MoveGenerator : sig
-    type move = ((int*int) * (int*int) * real)
+
+    type move = ((int*int) * (int*int))
     val generate_move_order: Board.brep -> move list
     val apply_move : Board.brep -> move -> Board.brep
-end = struct
-
-    type move = ((int*int) * (int*int) * real)
-    type bitboard = Word64.word
+end = 
+struct
+    type move = ((int*int) * (int*int))
 
     (* --- Bitboard masks --- *)
 
@@ -21,7 +21,8 @@ end = struct
 
     (* Masks for excluding a file or h file when shifting *)
     val not_a_file : Word64.word = Word64.notb file_a
-    val note_h_file : Word64.word = Word64.notb file_h
+
+    val not_h_file : Word64.word = Word64.notb file_h
     val not_ab_file : Word64.word = Word64.notb (Word64.orb(file_a, file_b))
     val not_gh_file : Word64.word = Word64.notb (Word64.orb(file_g, file_h))
     (* Ranks: 1-8, rank1 = bottom row *)
@@ -53,17 +54,19 @@ end = struct
     (* --- Bitboard helpers --- *)
     fun north b = Word64.<< (b, s8)
     fun south b = Word64.>> (b, s8)
-    fun east b = Word64.<< (Word64.andb (b, note_h_file), s1)
+
+    fun east b = Word64.<< (Word64.andb (b, not_h_file), s1)
     fun west b = Word64.>> (Word64.andb (b, not_a_file), s1)
-    fun northeast b = Word64.<< (Word64.andb (b, note_h_file), s9)
+    fun northeast b = Word64.<< (Word64.andb (b, not_h_file), s9)
     fun northwest b = Word64.<< (Word64.andb (b, not_a_file), s7)
-    fun southeast b = Word64.>> (Word64.andb (b, note_h_file), s7)
+    fun southeast b = Word64.>> (Word64.andb (b, not_h_file), s7)
     fun southwest b = Word64.>> (Word64.andb (b, not_a_file), s9)
     
 
     (* --- Convert bit index to (row,col) --- *)
-    fun indexToCoord i = (i div 8, i mod 8)
-    fun coord_to_index (r,c) = r*8 + c
+
+    fun indexToCoord i = (7 - (i div 8), 7 - (i mod 8))
+    fun coord_to_index (r,c) = (7-r)*8 + (7-c)
 
     (* --- Get occupancy bitboards --- *)
     fun occupancy (P,R,N,B,K,Q,p,r,n,b,k,q) =
@@ -78,10 +81,11 @@ end = struct
             val empty = Word64.notb (Word64.orb(ooc_white, occ_black))
             (* 1-step moves: any pawn can move north if empty *)
             val one_step = Word64.andb(north P, empty)
+
             (* 2-step moves: only from rank 2 and if 1-step is empty *)
-            val rank_2_pawn = Word64.andb(P, rank2)
-            val one_step_from_rank_2 = Word64.andb(north rank_2_pawn, empty)
-            val two_step = Word64.andb(north one_step_from_rank_2, empty)
+            val rank_3_pawn = Word64.andb(one_step, rank3)
+            val two_step = Word64.andb(north rank_3_pawn, empty)
+
             (* Captures *)
             val attacksL = Word64.andb(northwest P, occ_black)
             val attacksR = Word64.andb(northeast P, occ_black)
@@ -94,10 +98,13 @@ end = struct
             val empty = Word64.notb (Word64.orb(ooc_white, occ_black))
             (* 1-step moves *)
             val one_step = Word64.andb(south p, empty)
-            (* 2-step moves: only from rank 7 and if 1-step is empty *)
             val rank_7_pawns = Word64.andb(p, rank7)
             val one_step_from_rank7 = Word64.andb(south rank_7_pawns, empty)
             val two_step = Word64.andb(south one_step_from_rank7, empty)
+            (* 2-step moves: only from rank 7 and if 1-step is empty *)
+            val rank_6_pawns = Word64.andb(one_step, rank6)
+            val two_step = Word64.andb(south rank_6_pawns, empty)
+
             (* Captures *)
             val attacksL = Word64.andb(southwest p, ooc_white)
             val attacksR = Word64.andb(southeast p, ooc_white)
@@ -109,14 +116,15 @@ end = struct
     (* --- Knight moves --- *)
     fun knight_moves n occOwn =
         let
-            val n1 = Word64.<< (Word64.andb(n, not_a_file), Word.fromInt 15)
-            val n2 = Word64.<< (Word64.andb(n, note_h_file), Word.fromInt 17)
-            val n3 = Word64.<< (Word64.andb(n, not_ab_file), Word.fromInt 6)
-            val n4 = Word64.<< (Word64.andb(n, not_gh_file), Word.fromInt 10)
-            val n5 = Word64.andb(Word64.>> (n, Word.fromInt 15), note_h_file)
+
+            val n1 = Word64.<< (Word64.andb(n, not_h_file), Word.fromInt 15)
+            val n2 = Word64.<< (Word64.andb(n, not_a_file), Word.fromInt 17)
+            val n3 = Word64.<< (Word64.andb(n, not_gh_file), Word.fromInt 6)
+            val n4 = Word64.<< (Word64.andb(n, not_ab_file), Word.fromInt 10)
+            val n5 = Word64.andb(Word64.>> (n, Word.fromInt 15), not_h_file)
             val n6 = Word64.andb(Word64.>> (n, Word.fromInt 17), not_a_file)
-            val n7 = Word64.andb(Word64.>> (n, Word.fromInt 6), not_ab_file)
-            val n8 = Word64.andb(Word64.>> (n, Word.fromInt 10), not_gh_file)
+            val n7 = Word64.andb(Word64.>> (n, Word.fromInt 6), not_gh_file)
+            val n8 = Word64.andb(Word64.>> (n, Word.fromInt 10), not_ab_file)
             val moves = Word64.orb(n1,
                         Word64.orb(n2,
                         Word64.orb(n3,
@@ -146,11 +154,11 @@ end = struct
             val blockers = Word64.orb(ooc_white, occ_black)
             val own = if isWhite then ooc_white else occ_black
             val moves = Word64.orb(
-                slide north not_fr_rank b blockers,
+                slide north not_lr_rank b blockers,
                 Word64.orb(
-                    slide south not_lr_rank b blockers,
+                    slide south not_fr_rank b blockers,
                     Word64.orb(
-                        slide east note_h_file b blockers,
+                        slide east not_h_file b blockers,
                         slide west not_a_file b blockers
                     )
                 )
@@ -162,11 +170,11 @@ end = struct
             val blockers = Word64.orb(ooc_white, occ_black)
             val own = if isWhite then ooc_white else occ_black
             val moves = Word64.orb(
-                slide northeast note_h_file b blockers,
+                slide northeast not_h_file b blockers,
                 Word64.orb(
                     slide northwest not_a_file b blockers,
                     Word64.orb(
-                        slide southeast note_h_file b blockers,
+                        slide southeast not_h_file b blockers,
                         slide southwest not_a_file b blockers
                     )
                 )
@@ -200,11 +208,14 @@ end = struct
             fun aux [] acc = acc
               | aux (sq::rest) acc =
                   let
+                      (* this indexing is reverse ig *)
                       val idx = coord_to_index sq
+
+                      
                       val bb = Word64.<< (0w1, Word.fromInt idx)
                       val targets = if isWhite then white_pawn_moves bb ooc_white occ_black
                                     else black_pawn_moves bb ooc_white occ_black
-                      val moves = List.map (fn t => (sq,t,1.0)) (bitboard_to_moves targets)
+                      val moves = List.map (fn t => (sq,t)) (bitboard_to_moves targets)
                   in aux rest (moves @ acc) end
         in aux squares [] end
 
@@ -217,7 +228,7 @@ end = struct
                       val idx = coord_to_index sq
                       val bb = Word64.<< (0w1, Word.fromInt idx)
                       val targets = knight_moves bb occOwn
-                      val moves = List.map (fn t => (sq,t,1.0)) (bitboard_to_moves targets)
+                      val moves = List.map (fn t => (sq,t)) (bitboard_to_moves targets)
                   in aux rest (moves @ acc) end
         in aux squares [] end
 
@@ -230,7 +241,7 @@ end = struct
                       val idx = coord_to_index sq
                       val bb = Word64.<< (0w1, Word.fromInt idx)
                       val targets = pieceFunc bb ooc_white occ_black isWhite
-                      val moves = List.map (fn t => (sq,t,1.0)) (bitboard_to_moves targets)
+                      val moves = List.map (fn t => (sq,t)) (bitboard_to_moves targets)
                   in aux rest (moves @ acc) end
         in aux squares [] end
 
@@ -243,7 +254,8 @@ end = struct
                       val idx = coord_to_index sq
                       val bb = Word64.<< (0w1, Word.fromInt idx)
                       val targets = king_moves bb occOwn
-                      val moves = List.map (fn t => (sq,t,1.0)) (bitboard_to_moves targets)
+
+                      val moves = List.map (fn t => (sq,t)) (bitboard_to_moves targets)
                   in aux rest (moves @ acc) end
         in aux squares [] end
 
@@ -274,7 +286,8 @@ end = struct
         generate_piece_moves brep
 
     (* --- Apply move --- *)
-    fun apply_move brep ((fromR,fromC),(toR,toC),_) =
+
+    fun apply_move brep ((fromR,fromC),(toR,toC)) =
         let
             val (P,R,N,B,K,Q,p,r,n,b,k,q) = brep
             fun update bb from_index to_index =
