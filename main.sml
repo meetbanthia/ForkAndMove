@@ -170,3 +170,11 @@ fun test_move_generation ()=
 
 
 val _ =test_move_generation()
+
+
+val moves = MoveGenerator.generate_color_move_order (Board.board_representation board_3) true true false false false false false
+val _ = print "\n=== Generated Moves ===\n"
+val _ = List.app (fn ((fromR,fromC),(toR,toC)) =>
+                    print ( "(" ^ Int.toString fromR ^ "," ^ Int.toString fromC ^ ") -> " ^
+                            "(" ^ Int.toString toR ^ "," ^ Int.toString toC ^ ")\n")
+                 ) moves

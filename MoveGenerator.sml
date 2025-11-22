@@ -3,6 +3,7 @@ structure MoveGenerator : sig
     type move = ((int*int) * (int*int))
     val generate_move_order: Board.brep -> move list
     val apply_move : Board.brep -> move -> Board.brep
+    val generate_color_move_order : Board.brep -> bool -> bool-> bool-> bool-> bool-> bool-> bool -> move list
 end = 
 struct
     type move = ((int*int) * (int*int))
@@ -285,6 +286,39 @@ struct
     fun generate_move_order brep =
         generate_piece_moves brep
 
+    fun generate_color_move_order brep white pawn knight bishop rook king queen = 
+        let
+            val (P,R,N,B,K,Q,p,r,n,b,k,q) = brep
+            val (ooc_white, occ_black) = occupancy (P,R,N,B,K,Q,p,r,n,b,k,q)
+            (* White moves *)
+            val w_p_moves = generate_pawn_moves P ooc_white occ_black true
+            val w_n_moves = generate_knight_moves N ooc_white
+            val w_k_moves = generate_king_moves K ooc_white
+            val w_r_moves = generate_sliding_moves R ooc_white occ_black true rook_moves
+            val w_b_moves = generate_sliding_moves B ooc_white occ_black true bishop_moves
+            val w_q_moves = generate_sliding_moves Q ooc_white occ_black true queen_moves
+            (* Black moves *)
+            val b_P_moves = generate_pawn_moves p ooc_white occ_black false
+            val b_N_moves = generate_knight_moves n occ_black
+            val b_K_moves = generate_king_moves k occ_black
+            val b_R_moves = generate_sliding_moves r ooc_white occ_black false rook_moves
+            val b_B_moves = generate_sliding_moves b ooc_white occ_black false bishop_moves
+            val b_Q_moves = generate_sliding_moves q ooc_white occ_black false queen_moves
+        in
+            []
+                @ (if white andalso pawn   then w_p_moves else [])
+                @ (if white andalso knight then w_n_moves else [])
+                @ (if white andalso king   then w_k_moves else [])
+                @ (if white andalso rook   then w_r_moves else [])
+                @ (if white andalso bishop then w_b_moves else [])
+                @ (if white andalso queen  then w_q_moves else [])
+                @ (if (not white) andalso pawn   then b_P_moves else [])
+                @ (if (not white) andalso knight then b_N_moves else [])
+                @ (if (not white) andalso king   then b_K_moves else [])
+                @ (if (not white) andalso rook   then b_R_moves else [])
+                @ (if (not white) andalso bishop then b_B_moves else [])
+                @ (if (not white) andalso queen  then b_Q_moves else [])
+        end
     (* --- Apply move --- *)
 
     fun apply_move brep ((fromR,fromC),(toR,toC)) =
