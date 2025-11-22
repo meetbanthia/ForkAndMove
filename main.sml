@@ -138,3 +138,35 @@ val _ = List.app (fn ((fromR,fromC),(toR,toC),w) =>
 (* ============================================================= *)
 (* === End of PieceList Tests ================================= *)
 (* ============================================================= *)
+
+fun test_move_generation ()=
+    let
+        val board = Board.initiate_standard_chess()
+
+        (* Pawn Move *)
+        val white_pawn_move = MoveGenerator.apply_move board ((6,4),(4,4))
+        val _ = Board.print_board(white_pawn_move)
+
+        val black_pawn_move = MoveGenerator.apply_move white_pawn_move ((1,3),(3,3))
+        val _ = Board.print_board(black_pawn_move)
+
+        val white_pawn_move = MoveGenerator.apply_move black_pawn_move ((4,4),(3,3))
+        val _ = Board.print_board(white_pawn_move)
+
+        val black_pawn_move = MoveGenerator.apply_move white_pawn_move ((0,2),(5,7))
+        val _ = Board.print_board(black_pawn_move)
+
+        val white_pawn_move = MoveGenerator.apply_move black_pawn_move ((3,3),(2,3))
+        val _ = Board.print_board(white_pawn_move)
+
+        val black_pawn_move = MoveGenerator.apply_move white_pawn_move ((1,2),(2,3))
+        val _ = Board.print_board(black_pawn_move)
+
+        (* val pawn_move = MoveGenerator.apply_move board ((6,4),(4,4))
+        val _ = Board.print_board(pawn_move) *)
+    in
+        ()
+    end
+
+
+val _ =test_move_generation()

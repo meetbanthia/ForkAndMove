@@ -289,12 +289,31 @@ struct
 
     fun apply_move brep ((fromR,fromC),(toR,toC)) =
         let
+            fun remove_piece (P,R,N,B,K,Q,p,r,n,b,k,q) location =
+                let
+                val mask = Word64.notb(Word64.<<(0w1, Word.fromInt location))
+                in
+                    (Word64.andb(P,mask),
+                    Word64.andb(R,mask),
+                    Word64.andb(N,mask),
+                    Word64.andb(B,mask),
+                    Word64.andb(K,mask),
+                    Word64.andb(Q,mask),
+                    Word64.andb(p,mask),
+                    Word64.andb(r,mask),
+                    Word64.andb(n,mask),
+                    Word64.andb(b,mask),
+                    Word64.andb(k,mask),
+                    Word64.andb(q,mask)
+                    )
+                end
             val (P,R,N,B,K,Q,p,r,n,b,k,q) = brep
             fun update bb from_index to_index =
                 Word64.orb(Word64.andb(bb, Word64.notb(Word64.<< (0w1, Word.fromInt from_index))),
                            Word64.<< (0w1, Word.fromInt to_index))
             val from_index = coord_to_index (fromR, fromC)
             val to_index = coord_to_index (toR, toC)
+            val (P,R,N,B,K,Q,p,r,n,b,k,q) = remove_piece (P,R,N,B,K,Q,p,r,n,b,k,q) to_index
             val P' = if Word64.andb(P, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update P from_index to_index else P
             val N' = if Word64.andb(N, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update N from_index to_index else N
             val R' = if Word64.andb(R, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update R from_index to_index else R
