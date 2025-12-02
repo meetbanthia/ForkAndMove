@@ -22,10 +22,10 @@ struct
 
     (* Masks for excluding a file or h file when shifting *)
     val not_a_file : Word64.word = Word64.notb file_a
-
     val not_h_file : Word64.word = Word64.notb file_h
     val not_ab_file : Word64.word = Word64.notb (Word64.orb(file_a, file_b))
     val not_gh_file : Word64.word = Word64.notb (Word64.orb(file_g, file_h))
+    
     (* Ranks: 1-8, rank1 = bottom row *)
     val rank1 : Word64.word = 0wx00000000000000FF
     val rank2 : Word64.word = 0wx000000000000FF00
@@ -348,18 +348,38 @@ struct
             val from_index = coord_to_index (fromR, fromC)
             val to_index = coord_to_index (toR, toC)
             val (P,R,N,B,K,Q,p,r,n,b,k,q) = remove_piece (P,R,N,B,K,Q,p,r,n,b,k,q) to_index
-            val P' = if Word64.andb(P, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update P from_index to_index else P
-            val N' = if Word64.andb(N, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update N from_index to_index else N
-            val R' = if Word64.andb(R, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update R from_index to_index else R
-            val B' = if Word64.andb(B, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update B from_index to_index else B
-            val Q' = if Word64.andb(Q, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update Q from_index to_index else Q
-            val K' = if Word64.andb(K, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update K from_index to_index else K
-            val p' = if Word64.andb(p, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update p from_index to_index else p
-            val n' = if Word64.andb(n, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update n from_index to_index else n
-            val r' = if Word64.andb(r, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update r from_index to_index else r
-            val b' = if Word64.andb(b, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update b from_index to_index else b
-            val q' = if Word64.andb(q, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update q from_index to_index else q
-            val k' = if Word64.andb(k, Word64.<< (0w1, Word.fromInt from_index)) <> 0w0 then update k from_index to_index else k
+            val from_mask = Word64.<< (0w1, Word.fromInt from_index)
+            val to_mask = Word64.<< (0w1, Word.fromInt to_index)
+
+            val is_white_pawn = Word64.andb(P, from_mask) <> 0w0
+            val is_black_pawn = Word64.andb(p, from_mask) <> 0w0
+
+            val is_white_promotion = is_white_pawn andalso toR = 0
+            val is_black_promotion = is_black_pawn andalso toR = 7
+
+            val P' = if is_white_pawn then
+                        if is_white_promotion then Word64.andb(P, Word64.notb from_mask)
+                        else update P from_index to_index
+                     else P
+            val N' = if Word64.andb(N, from_mask) <> 0w0 then update N from_index to_index else N
+            val R' = if Word64.andb(R, from_mask) <> 0w0 then update R from_index to_index else R
+            val B' = if Word64.andb(B, from_mask) <> 0w0 then update B from_index to_index else B
+            val Q' = if Word64.andb(Q, from_mask) <> 0w0 then update Q from_index to_index
+                     else if is_white_promotion then Word64.orb(Q, to_mask)
+                     else Q
+            val K' = if Word64.andb(K, from_mask) <> 0w0 then update K from_index to_index else K
+
+            val p' = if is_black_pawn then
+                        if is_black_promotion then Word64.andb(p, Word64.notb from_mask)
+                        else update p from_index to_index
+                     else p
+            val n' = if Word64.andb(n, from_mask) <> 0w0 then update n from_index to_index else n
+            val r' = if Word64.andb(r, from_mask) <> 0w0 then update r from_index to_index else r
+            val b' = if Word64.andb(b, from_mask) <> 0w0 then update b from_index to_index else b
+            val q' = if Word64.andb(q, from_mask) <> 0w0 then update q from_index to_index
+                     else if is_black_promotion then Word64.orb(q, to_mask)
+                     else q
+            val k' = if Word64.andb(k, from_mask) <> 0w0 then update k from_index to_index else k
         in
             (P',R',N',B',K',Q',p',r',n',b',k',q')
         end
