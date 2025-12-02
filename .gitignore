@@ -1,0 +1,12 @@
+main
+test
+.mpl/
+.mlton/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*~
+*.swp
+.DS_Store
