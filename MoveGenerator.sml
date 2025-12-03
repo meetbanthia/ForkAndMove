@@ -155,9 +155,9 @@ struct
             val blockers = Word64.orb(ooc_white, occ_black)
             val own = if isWhite then ooc_white else occ_black
             val moves = Word64.orb(
-                slide north not_lr_rank b blockers,
+                slide north not_fr_rank b blockers,
                 Word64.orb(
-                    slide south not_fr_rank b blockers,
+                    slide south not_lr_rank b blockers,
                     Word64.orb(
                         slide east not_h_file b blockers,
                         slide west not_a_file b blockers
