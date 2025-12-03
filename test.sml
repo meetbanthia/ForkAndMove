@@ -1,4 +1,4 @@
-fun bitmaps_test () =
+fun apply_move_tests () =
     let 
         (* Helper to print a header for each test *)
         fun print_header msg = 
@@ -273,11 +273,177 @@ fun bitmaps_test () =
         ()
     end
 
+fun test_move_ordering_color () =
+    let 
+        (* Helper to print a header for each test *)
+        fun print_header msg = 
+            print ("\n========================================\n" ^ msg ^ "\n========================================\n")
+        
+        (* Helper to convert move coords to algebraic string (e.g. "e2-e4") *)
+        fun move_to_string ((r1,c1),(r2,c2)) =
+            let
+                fun row_to_rank r = Int.toString (8 - r)
+                fun col_to_file c = String.str (Char.chr (c + 97))
+            in
+                (col_to_file c1) ^ (row_to_rank r1) ^ "-" ^ (col_to_file c2) ^ (row_to_rank r2)
+            end
+            
+        val _ = print_header "TEST: Move Ordering by Piece Type"
+        
+        (* 
+           Scenario: White has multiple piece types available to move.
+           We want to verify that we can request specific piece types.
+        *)
+        val b0 = Board.initiate_standard_chess()
+        val _ = Board.print_board(b0)
+        
+        (* 1. Only Pawns *)
+        val _ = print "\n--- White Pawns Only ---\n"
+        (* generate_color_move_order brep white pawn knight bishop rook king queen *)
+        val pawn_moves = MoveGenerator.generate_color_move_order b0 true true false false false false false
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) pawn_moves
+        val _ = print ("\nCount: " ^ Int.toString (length pawn_moves) ^ "\n")
+
+        (* 2. Only Knights *)
+        val _ = print "\n--- White Knights Only ---\n"
+        val knight_moves = MoveGenerator.generate_color_move_order b0 true false true false false false false
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) knight_moves
+        val _ = print ("\nCount: " ^ Int.toString (length knight_moves) ^ "\n")
+
+        (* 3. Pawns and Knights *)
+        val _ = print "\n--- White Pawns & Knights ---\n"
+        val pn_moves = MoveGenerator.generate_color_move_order b0 true true true false false false false
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) pn_moves
+        val _ = print ("\nCount: " ^ Int.toString (length pn_moves) ^ "\n")
+        
+        (* 4. Black Pieces (Standard Position) *)
+        val _ = print "\n--- Black Pawns Only ---\n"
+        val b_pawn_moves = MoveGenerator.generate_color_move_order b0 false true false false false false false
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) b_pawn_moves
+        val _ = print ("\nCount: " ^ Int.toString (length b_pawn_moves) ^ "\n")
+        
+        (* 5. Non-existent moves (e.g. Bishops in starting position for White) *)
+        val _ = print "\n--- White Bishops Only (Should be empty) ---\n"
+        val bishop_moves = MoveGenerator.generate_color_move_order b0 true false false true false false false
+        val _ = if null bishop_moves then print "Correct: No bishop moves.\n" else print "Error: Found bishop moves!\n"
+
+    in
+        ()
+    end
+
+fun test_capture_and_block_logic () =
+    let
+        (* Helper to print a header for each test *)
+        fun print_header msg = 
+            print ("\n========================================\n" ^ msg ^ "\n========================================\n")
+
+        fun move_to_string ((r1,c1),(r2,c2)) =
+            let
+                fun row_to_rank r = Int.toString (8 - r)
+                fun col_to_file c = String.str (Char.chr (c + 97))
+            in
+                (col_to_file c1) ^ (row_to_rank r1) ^ "-" ^ (col_to_file c2) ^ (row_to_rank r2)
+            end
+
+        val _ = print_header "TEST: Capture and Friendly Block Logic"
+
+        (* Scenario: White Rook on a1, White Pawn on a2, Black Pawn on a3 *)
+        (* Rook should be blocked by a2 (friendly) - cannot move to a2 *)
+        (* If Pawn on a2 was Black, Rook could capture a2 *)
+        
+        (* We'll use a custom board setup to test this *)
+        (* Since we can't easily construct arbitrary boards without FEN (which is in Main, not exposed?), 
+           we will play moves to reach a state or assume standard board and modify logic if possible. 
+           Actually, Board.initiate_standard_chess is hardcoded. 
+           However, MoveGenerator.apply_move allows us to teleport pieces if we don't validate legality strictly.
+           But apply_move updates bitboards based on FROM and TO. 
+           Let's just use standard board and make moves.
+        *)
+
+        val b0 = Board.initiate_standard_chess()
+        
+        (* 
+           Test 1: Friendly Fire Prevention
+           White Bishop on c1. White Pawn on d2.
+           Bishop on c1 should NOT generate move to d2.
+        *)
+        val _ = print "\n--- Test 1: Friendly Block (Bishop c1 blocked by Pawn d2) ---\n"
+        val _ = Board.print_board(b0)
+        (* Generate ONLY Bishop moves *)
+        val bishop_moves = MoveGenerator.generate_color_move_order b0 true false false true false false false
+        val _ = print "\nGenerated Bishop Moves:\n"
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) bishop_moves
+        val _ = print "\n"
+        (* Check if any move targets d2 (6,3) *)
+        (* c1 is (7,2). d2 is (6,3). *)
+        val moves_to_d2 = List.filter (fn ((r1,c1),(r2,c2)) => r1=7 andalso c1=2 andalso r2=6 andalso c2=3) bishop_moves
+        val _ = if null moves_to_d2 then print "PASSED: Bishop cannot move to d2 (occupied by friendly pawn).\n" 
+                else print "FAILED: Bishop generated move to friendly square d2!\n"
+
+        (* 
+           Test 2: Enemy Capture Generation
+           Setup: 
+           1. e4 d5
+           White Pawn at e4 (4,4). Black Pawn at d5 (3,3).
+           White Pawn captures d5? No, pawns capture diagonally.
+           Let's use: 1. e4 d5 2. exd5
+           White pawn at e4 (4,4). Black pawn at d5 (3,3).
+           Wait, e4 is (4,4). d5 is (3,3).
+           Pawn at e4 captures diagonally to d5 (3,3) and f5 (3,5).
+           If d5 is occupied by Black, e4->d5 should be generated.
+        *)
+        val _ = print "\n--- Test 2: Enemy Capture (Pawn e4 captures d5) ---\n"
+        val b1 = MoveGenerator.apply_move b0 ((6,4),(4,4)) (* 1. e4 *)
+        val b2 = MoveGenerator.apply_move b1 ((1,3),(3,3)) (* 1... d5 *)
+        val _ = Board.print_board(b2)
+        
+        val w_pawn_moves = MoveGenerator.generate_color_move_order b2 true true false false false false false
+        val _ = print "\nGenerated White Pawn Moves:\n"
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) w_pawn_moves
+        val _ = print "\n"
+        (* Look for move (4,4)->(3,3) *)
+        val capture_move = List.filter (fn ((r1,c1),(r2,c2)) => r1=4 andalso c1=4 andalso r2=3 andalso c2=3) w_pawn_moves
+        val _ = if not (null capture_move) then print "PASSED: Pawn generated capture move e4xd5.\n"
+                else print "FAILED: Pawn missed capture move e4xd5!\n"
 
 
+        (*
+            Test 3: Rook Capture vs Block
+            Board b2 has white pawn at e4, black pawn at d5.
+            Let's clear the e-file for white rook at e1? No, King is there.
+            Let's use a-file. 
+            1. a4 (White Pawn a2->a4). a4 is (4,0). a2 is empty.
+            Rook at a1 (7,0).
+            Moves for Rook a1: a2, a3. a4 is blocked by friendly pawn?
+            Wait, standard board:
+            a1=R, a2=P.
+            Rook cannot move at all vertically.
+            Let's move pawn a2 -> a4.
+            Now a1=R, a2=empty, a3=empty, a4=P (White).
+            Rook moves: a2, a3. Should NOT move to a4.
+        *)
+        val _ = print "\n--- Test 3: Rook blocked by friendly piece ---\n"
+        val b3 = MoveGenerator.apply_move b0 ((6,0),(4,0)) (* 1. a4 *)
+        val _ = Board.print_board(b3)
+        (* Generate Rook moves *)
+        val rook_moves = MoveGenerator.generate_color_move_order b3 true false false false true false false
+        val _ = print "\nGenerated Rook Moves:\n"
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) rook_moves
+        val _ = print "\n"
+        (* Check for (7,0) -> (4,0) [a1->a4] *)
+        val bad_move = List.filter (fn ((r1,c1),(r2,c2)) => r1=7 andalso c1=0 andalso r2=4 andalso c2=0) rook_moves
+        (* Check valid moves: a2 (6,0), a3 (5,0) *)
+        val valid_a2 = List.filter (fn ((r1,c1),(r2,c2)) => r1=7 andalso c1=0 andalso r2=6 andalso c2=0) rook_moves
+        val valid_a3 = List.filter (fn ((r1,c1),(r2,c2)) => r1=7 andalso c1=0 andalso r2=5 andalso c2=0) rook_moves
+        
+        val _ = if null bad_move then print "PASSED: Rook blocked by friendly pawn at a4.\n" 
+                else print "FAILED: Rook generated move to friendly square a4!\n"
+        val _ = if (not (null valid_a2)) andalso (not (null valid_a3)) then print "PASSED: Rook generates valid intermediate moves.\n"
+                else print "FAILED: Rook missed valid moves a2 or a3.\n"
 
-
-
+    in
+        ()
+    end
 
 fun piecelist_tests ()=
     let
@@ -407,6 +573,8 @@ fun evaluate_test () =
 
 
 (* Execution *)
-(* val _ = bitmaps_test () *)
-val _ = evaluate_test ()
+(* val _ = apply_move_tests () *)
+(* val _ = test_move_ordering_color () *)
+val _ = test_capture_and_block_logic ()
+(* val _ = evaluate_test () *)
 
