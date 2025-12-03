@@ -562,6 +562,26 @@ fun test_capture_and_block_logic () =
         val _ = print "\n"
 
 
+        val _ = print "\n--- Test 9: Weird combo ---\n"
+        val board6 = array2_of_lists (8,8) [
+             [#"r",#" ",#" ",#" ",#" ",#" ",#" ",#"k"],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],  (* c7 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],  (* rook at c6 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],  (* c5 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#"Q",#" ",#" ",#" ",#" ",#" ",#" ",#"K"]
+        ];
+        val b6 = Board.board_representation board6
+        val rook_moves6 = MoveGenerator.generate_color_move_order b6 false true true true true true true
+        val _ = Board.print_board(b6)
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) rook_moves6
+        val _ = print "\n"
+        val rook_moves_ordered = MoveGenerator.order_moves b6 false rook_moves6
+        val _ = MoveGenerator.print_ordered_moves rook_moves_ordered
+
+
 
     in
         ()
@@ -696,7 +716,7 @@ fun evaluate_test () =
 
 (* Execution *)
 (* val _ = apply_move_tests () *)
-(* val _ = test_move_ordering_color ()
-val _ = test_capture_and_block_logic () *)
-val _ = evaluate_test ()
+(* val _ = test_move_ordering_color () *)
+val _ = test_capture_and_block_logic ()
+(* val _ = evaluate_test () *)
 

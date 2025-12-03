@@ -540,7 +540,8 @@ struct
                 + threatenedOppValue
                 - threatenedOwnValue
         in
-            score
+            if isCheckMe then NONE else
+            SOME score
         end
 
 
@@ -576,8 +577,11 @@ struct
     (* order_moves: evaluate → sort → extract *)
     fun order_moves brep isWhite moves =
         let
-            val scored : (int * move) list =
-                List.map (fn m => (evaluate_move brep isWhite m, m)) moves
+        val scored : (int * move) list =
+            List.mapPartial
+                (fn (SOME score, m) => SOME (score, m)
+                | (NONE, _) => NONE)
+                (List.map (fn m => (evaluate_move brep isWhite m, m)) moves)
             val sorted_pairs = msort scored
         in
             sorted_pairs
