@@ -6,6 +6,7 @@ structure MoveGenerator : sig
     val generate_color_move_order : Board.brep -> bool -> bool-> bool-> bool-> bool-> bool-> bool -> move list
     val order_moves : Board.brep -> bool -> move list -> (int * move) list
     val print_ordered_moves : (int * move) list -> unit
+    val generate_ordered_moves : Board.brep -> bool -> move list
 end = 
 struct
     type move = ((int*int) * (int*int))
@@ -593,5 +594,14 @@ struct
         List.app printOne pairs
     end
 
+
+    fun generate_ordered_moves board isWhite =
+     let 
+        val moves = generate_color_move_order board isWhite true true true true true true
+        val sorted = order_moves board isWhite moves
+     in
+        List.map #2 sorted
+     end
+     
 
 end
