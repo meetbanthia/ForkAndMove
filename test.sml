@@ -946,28 +946,28 @@ fun evaluate_test () =
         
         (* Initial Board *)
         val b0 = Board.initiate_standard_chess()
-        val score0 = Search.eval_position b0
+        val score0 = Search.eval_position b0 true
         val _ = Board.print_board(b0)
         val _ = print ("Initial Board Score: " ^ Real.toString score0 ^ "\n")
         
         (* 1. e4 *)
         val _ = print "\n--- 1. e4 ((6,4) -> (4,4)) ---\n"
         val b1 = MoveGenerator.apply_move b0 ((6,4),(4,4))
-        val score1 = Search.eval_position b1
+        val score1 = Search.eval_position b1 true
         val _ = Board.print_board(b1)
         val _ = print ("After 1. e4 Score: " ^ Real.toString score1 ^ "\n")
 
          (* 1... e5 *)
         val _ = print "\n--- 1... e5 ((1,4) -> (3,4)) ---\n"
         val b2 = MoveGenerator.apply_move b1 ((1,4),(3,4))
-        val score2 = Search.eval_position b2
+        val score2 = Search.eval_position b2 true
         val _ = Board.print_board(b2)
         val _ = print ("After 1... e5 Score: " ^ Real.toString score2 ^ "\n")
         
         (* 2. Qf3 (developing queen) *)
         val _ = print "\n--- 2. Qf3 ((7,3) -> (5,5)) ---\n"
         val b3 = MoveGenerator.apply_move b2 ((7,3),(5,5))
-        val score3 = Search.eval_position b3
+        val score3 = Search.eval_position b3 true
         val _ = Board.print_board(b3)
         val _ = print ("After 2. Qf3 Score: " ^ Real.toString score3 ^ "\n")
 
@@ -979,12 +979,132 @@ fun evaluate_test () =
         val b_cap1 = MoveGenerator.apply_move b_cap0 ((6,4),(4,4)) (* e4 *)
         val b_cap2 = MoveGenerator.apply_move b_cap1 ((1,3),(3,3)) (* d5 *)
         val b_cap3 = MoveGenerator.apply_move b_cap2 ((4,4),(3,3)) (* exd5 *)
-        val score_cap = Search.eval_position b_cap3
+        val score_cap = Search.eval_position b_cap3 true
         val _ = Board.print_board(b_cap3)
         val _ = print ("After Capture (White up a pawn) Score: " ^ Real.toString score_cap ^ "\n")
+
+        (* --- New Threat Tests --- *)
+        val _ = print "\n--- Threat Test 1: White Rook threatens Black Pawn ---\n"
+        (* Setup: White R(a1), K(h1). Black p(a5), k(h8). *)
+        val board_t1 = Array2.fromList [
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#"k"], (* h8 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#"p",#" ",#" ",#" ",#" ",#" ",#" ",#" "], (* a5 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#"R",#" ",#" ",#" ",#" ",#" ",#" ",#"K"]  (* a1, h1 *)
+        ];
+        val b_t1 = Board.board_representation board_t1
+        val score_t1 = Search.eval_position b_t1 false
+        val _ = Board.print_board(b_t1)
+        (* 
+           Material: 
+           White: R(500) + K(20000) = 20500
+           Black: p(100) + k(20000) = 20100
+           Diff: 400.
+           
+           Threats:
+           White R(a1) -> a5 (captures p=100). Threat = 100.
+           Black p(a5) -> a4. No capture.
+           
+           Total Score = 400 + (100 - 0)*0.5 = 450.
+        *)
+        val _ = print ("Score T1 (R threatens p): " ^ Real.toString score_t1 ^ " (Expected ~450.0)\n")
+
+        val _ = print "\n--- Threat Test 2: Black Rook threatens White Queen ---\n"
+        (* Setup: Black r(a8), k(h8). White Q(a1), K(h1). *)
+        val board_t2 = Array2.fromList [
+             [#"r",#" ",#" ",#" ",#" ",#" ",#" ",#"k"], (* a8, h8 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#"Q",#" ",#" ",#" ",#" ",#" ",#" ",#"K"]  (* a1, h1 *)
+        ];
+        val b_t2 = Board.board_representation board_t2
+        val score_t2 = Search.eval_position b_t2 false
+        val _ = Board.print_board(b_t2)
+        (* 
+           Material:
+           White: Q(900) + K = 20900
+           Black: r(500) + k = 20500
+           Diff: 400.
+           
+           Threats:
+           White Q(a1) -> a8 (captures r=500). Threat = 500.
+           Black r(a8) -> a1 (captures Q=900). Threat = 900.
+           
+           Total Score = 400 + (500 - 900)*0.5 = 400 - 200 = 200.
+        *)
+        val _ = print ("Score T2 (Mutual Q vs r): " ^ Real.toString score_t2 ^ " (Expected ~200.0)\n")
+
+        val _ = print "\n--- Threat Test 3: Hanging Queen ---\n"
+        val board_t3 = Array2.fromList [
+             [#" ",#" ",#" ",#" ",#"k",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#"p",#" ",#" ",#" ",#" ",#" "], (* c5 (3,2) *)
+             [#" ",#" ",#" ",#"Q",#" ",#" ",#" ",#" "], (* d4 (4,3) *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#"K",#" ",#" ",#" "]
+        ];
+        val b_t3 = Board.board_representation board_t3
+        val score_t3_b = Search.eval_position b_t3 false
+        val score_t3_w = Search.eval_position b_t3 true
+        val _ = Board.print_board(b_t3)
+        val _ = print ("Score T3 (Black to move): " ^ Real.toString score_t3_b ^ " (Expected ~ -100.0)\n")
+        val _ = print ("Score T3 (White to move): " ^ Real.toString score_t3_w ^ " (Expected ~ 350.0)\n")
+
+        val _ = print "\n--- Threat Test 4: Knight Fork ---\n"
+        val board_t4 = Array2.fromList [
+             [#" ",#" ",#" ",#" ",#"k",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#"r",#" ",#"r",#" ",#" "], (* d7, f7 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#"N",#" ",#" ",#" "], (* e5 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#"K",#" ",#" ",#" "]
+        ];
+        val b_t4 = Board.board_representation board_t4
+        val score_t4_w = Search.eval_position b_t4 true
+        val _ = Board.print_board(b_t4)
+        val _ = print ("Score T4 (White to move, Fork): " ^ Real.toString score_t4_w ^ " (Expected ~320.0)\n")
+
+        val _ = print "\n--- Threat Test 5: Pinned/Trapped Piece (Simulated) ---\n"
+        (* White B on a1. Black R on a8. 
+           R attacks B. B attacks nothing (blocked by own pawn or empty? Empty board).
+           Material: 330 vs 500 = -170.
+           Threat: Black R on a8 attacks a1 (330).
+           Black to move: 330 * 1.0 = 330. Total: -170 - 330 = -500.
+           White to move: 330 * 0.5 = 165. Total: -170 - 165 = -335.
+        *)
+        val board_t5 = Array2.fromList [
+             [#"r",#" ",#" ",#" ",#"k",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#"B",#" ",#" ",#" ",#"K",#" ",#" ",#" "]
+        ];
+        val b_t5 = Board.board_representation board_t5
+        val score_t5_b = Search.eval_position b_t5 false
+        val score_t5_w = Search.eval_position b_t5 true
+        val _ = Board.print_board(b_t5)
+        val _ = print ("Score T5 (Black to move): " ^ Real.toString score_t5_b ^ " (Expected ~ -500.0)\n")
+        val _ = print ("Score T5 (White to move): " ^ Real.toString score_t5_w ^ " (Expected ~ -335.0)\n")
+
     in
         ()
     end
+
 
 
 (* Execution *)
