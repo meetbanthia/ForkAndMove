@@ -504,22 +504,24 @@ fun test_capture_and_block_logic () =
         val _ = print "\n"
 
 
-        val _ = print "\n--- Test 6: Rook blocked by enemy pawn at a4 ---\n"
+        val _ = print "\n--- Test 6: Rook blocked by enemy queen at a4 with additional bishop---\n"
         val board3 = array2_of_lists (8,8) [
-             [#"R",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#"R",#" ",#" ",#"B",#" ",#" ",#" "],
              [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
              [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
              [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
-             [#"p",#" ",#" ",#" ",#" ",#" ",#" ",#" "],  (* enemy pawn *)
+             [#"q",#" ",#" ",#" ",#" ",#" ",#" ",#" "],  (* enemy pawn *)
              [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
-             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#"q",#" ",#" ",#" ",#" ",#" ",#" "],
              [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "]
         ];
         val b3 = Board.board_representation board3
-        val rook_moves3 = MoveGenerator.generate_color_move_order b3 true false false false true false false
+        val rook_moves3 = MoveGenerator.generate_color_move_order b3 true false true true true true true
         val _ = Board.print_board(b3)
         val _ = List.app (fn m => print (move_to_string m ^ " ")) rook_moves3
         val _ = print "\n"
+        val rook_moves_ordered = MoveGenerator.order_moves b3 true rook_moves3
+        val _ = MoveGenerator.print_ordered_moves rook_moves_ordered
 
 
 
@@ -694,7 +696,7 @@ fun evaluate_test () =
 
 (* Execution *)
 (* val _ = apply_move_tests () *)
-(* val _ = test_move_ordering_color () *)
+val _ = test_move_ordering_color ()
 val _ = test_capture_and_block_logic ()
 (* val _ = evaluate_test () *)
 
