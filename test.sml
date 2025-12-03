@@ -1,3 +1,25 @@
+(* Helper: convert a list of lists to an Array2.array *)
+    fun array2_of_lists (rows, cols) board =
+        let
+            val arr = Array2.array (rows, cols, #" ")  (* Initialize with dummy value *)
+            fun fill r [] = ()
+            | fill r (row::restRows) =
+                    let
+                        fun fillCol c [] = ()
+                        | fillCol c (x::xs) = (
+                                Array2.update(arr, r, c, x);
+                                fillCol (c+1) xs
+                            )
+                    in
+                        fillCol 0 row;
+                        fill (r+1) restRows
+                    end
+        in
+            fill 0 board;
+            arr
+        end;
+
+
 fun apply_move_tests () =
     let 
         (* Helper to print a header for each test *)
@@ -440,6 +462,102 @@ fun test_capture_and_block_logic () =
                 else print "FAILED: Rook generated move to friendly square a4!\n"
         val _ = if (not (null valid_a2)) andalso (not (null valid_a3)) then print "PASSED: Rook generates valid intermediate moves.\n"
                 else print "FAILED: Rook missed valid moves a2 or a3.\n"
+
+
+        val _ = print "\n--- Test 4: Rook on empty file ---\n"
+        val board1 = array2_of_lists (8,8) [
+             [#"R",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "]
+        ];
+        val b1 = Board.board_representation board1
+        val rook_moves1 = MoveGenerator.generate_color_move_order b1 true false false false true false false
+        val _ = Board.print_board(b1)
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) rook_moves1
+        val _ = print "\n"
+        val bad_move1 = List.filter (fn ((r1,c1),(r2,c2)) => r1=7 andalso c1=0 andalso r2<0) rook_moves1  (* impossible *)
+        val _ = if null bad_move1 then print "PASSED: No illegal moves.\n" else print "FAILED: Generated illegal moves!\n"
+
+
+        val _ = print "\n--- Test 5: Rook blocked by friendly pawn at a4 ---\n"
+        val board2 = array2_of_lists (8,8) [
+             [#"R",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#"P",#" ",#" ",#" ",#" ",#" ",#" ",#" "],  (* a4 blocks *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "]
+        ];
+        val b2 = Board.board_representation board2
+        val rook_moves2 = MoveGenerator.generate_color_move_order b2 true false false false true false false
+        val _ = Board.print_board(b2)
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) rook_moves2
+        val _ = print "\n"
+
+
+        val _ = print "\n--- Test 6: Rook blocked by enemy pawn at a4 ---\n"
+        val board3 = array2_of_lists (8,8) [
+             [#"R",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#"p",#" ",#" ",#" ",#" ",#" ",#" ",#" "],  (* enemy pawn *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "]
+        ];
+        val b3 = Board.board_representation board3
+        val rook_moves3 = MoveGenerator.generate_color_move_order b3 true false false false true false false
+        val _ = Board.print_board(b3)
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) rook_moves3
+        val _ = print "\n"
+
+
+
+        val _ = print "\n--- Test 7: Rook in middle of empty board ---\n"
+        val board4 = array2_of_lists (8,8) [
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#"R",#" ",#" ",#" ",#" ",#" "],  (* c5 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "]
+        ];
+        val b4 = Board.board_representation board4
+        val rook_moves4 = MoveGenerator.generate_color_move_order b4 true false false false true false false
+        val _ = Board.print_board(b4)
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) rook_moves4
+        val _ = print "\n"
+
+    
+
+        val _ = print "\n--- Test 8: Rook completely blocked by friendly pawns ---\n"
+        val board5 = array2_of_lists (8,8) [
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#"P",#" ",#" ",#" ",#" ",#" "],  (* c7 *)
+             [#" ",#"P",#"R",#"P",#" ",#" ",#" ",#" "],  (* rook at c6 *)
+             [#" ",#" ",#"P",#" ",#" ",#" ",#" ",#" "],  (* c5 *)
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "]
+        ];
+        val b5 = Board.board_representation board5
+        val rook_moves5 = MoveGenerator.generate_color_move_order b5 true false false false true false false
+        val _ = Board.print_board(b5)
+        val _ = List.app (fn m => print (move_to_string m ^ " ")) rook_moves5
+        val _ = print "\n"
+
+
 
     in
         ()
