@@ -4,6 +4,8 @@ structure MoveGenerator : sig
     val generate_move_order: Board.brep -> move list
     val apply_move : Board.brep -> move -> Board.brep
     val generate_color_move_order : Board.brep -> bool -> bool-> bool-> bool-> bool-> bool-> bool -> move list
+    val order_moves : Board.brep -> bool -> move list -> (int * move) list
+    val print_ordered_moves : (int * move) list -> unit
 end = 
 struct
     type move = ((int*int) * (int*int))
@@ -383,5 +385,213 @@ struct
         in
             (P',R',N',B',K',Q',p',r',n',b',k',q')
         end
+
+
+        (* Piece values for heuristics *)
+        val capValQ = 20
+        val capValR = 10
+        val capValB = 8
+        val capValN = 5
+        val capValP = 1
+
+        val thrValQ = 10
+        val thrValR = 5
+        val thrValB = 4
+        val thrValN = 3
+        val thrValP = 1
+
+        fun piece_value_capture bb (P,R,N,B,K,Q,p,r,n,b,k,q) isWhite =
+            let
+                fun has b = Word64.andb(bb,b) <> 0w0
+            in
+                if isWhite then
+                    if has p then capValP else
+                    if has n then capValN else
+                    if has b then capValB else
+                    if has r then capValR else
+                    if has q then capValQ else 0
+                else
+                    if has P then capValP else
+                    if has N then capValN else
+                    if has B then capValB else
+                    if has R then capValR else
+                    if has Q then capValQ else 0
+            end
+
+        fun piece_value_threat bb (P,R,N,B,K,Q,p,r,n,b,k,q) isWhite =
+            let fun has b = Word64.andb(bb,b) <> 0w0 in
+                if isWhite then
+                    if has p then thrValP else
+                    if has n then thrValN else
+                    if has b then thrValB else
+                    if has r then thrValR else
+                    if has q then thrValQ else 0
+                else
+                    if has P then thrValP else
+                    if has N then thrValN else
+                    if has B then thrValB else
+                    if has R then thrValR else
+                    if has Q then thrValQ else 0
+            end
+
+
+    (* Determine if a king is in check *)
+    fun king_in_check brep isWhite =
+        let
+            val (_,_,_,_,K,_,_,_,_,_,k,_) = brep
+            val kingSq =
+                if isWhite then bitboard_to_moves K
+                else bitboard_to_moves k
+            val kingPos = case kingSq of [x] => x | _ => (0,0)
+
+            val oppMoves =
+                generate_color_move_order brep (not isWhite)
+                    true true true true true true
+
+            fun attacksKing (_,toSq) = toSq = kingPos
+        in
+            List.exists attacksKing oppMoves
+        end
+
+
+    fun evaluate_move brep isWhite move =
+        let
+            val (P,R,N,B,K,Q,p,r,n,b,k,q) = brep
+            val ((frR,frC),(toR,toC)) = move
+            val to_idx = coord_to_index (toR,toC)
+            val to_mask = Word64.<<(0w1, Word.fromInt to_idx)
+
+            val base_after = apply_move brep move
+
+            val score_init = 0
+
+            (* A: Checkmate / check *)
+            val oppMoves = generate_color_move_order base_after (not isWhite)
+                            true true true true true true
+            val myMoves  = generate_color_move_order base_after isWhite
+                            true true true true true true
+
+            val isCheckmateOpp = (length oppMoves = 0) andalso king_in_check base_after (not isWhite)
+            val isCheckOpp     = king_in_check base_after (not isWhite)
+
+            val isCheckmateMe  = (length myMoves = 0) andalso king_in_check base_after isWhite
+            val isCheckMe      = king_in_check base_after isWhite
+
+            val scoreA =
+                (if isCheckmateOpp then 10000 else 0)
+                + (if isCheckOpp     then 5     else 0)
+                - (if isCheckmateMe  then 10000 else 0)
+                - (if isCheckMe      then 5     else 0)
+
+            (* C: Capture *)
+            val capturedValue =
+                piece_value_capture to_mask brep isWhite
+
+            (* threat-check from new position *)
+            val (P2,R2,N2,B2,K2,Q2,p2,r2,n2,b2,k2,q2) = base_after
+            val myPieces =
+                if isWhite then [P2,N2,B2,R2,Q2] else [p2,n2,b2,r2,q2]
+            val oppPieces =
+                if isWhite then [p2,n2,b2,r2,q2] else [P2,N2,B2,R2,Q2]
+
+            val oppMovesAfter =
+                generate_color_move_order base_after (not isWhite)
+                    true true true true true true
+
+            fun threatenedOwn () =
+                let
+                    fun anyThreat (_,toSq) =
+                        let val idx = coord_to_index toSq
+                            val bb = Word64.<<(0w1, Word.fromInt idx)
+                        in List.exists (fn pbb => Word64.andb(bb,pbb)<>0w0) myPieces end
+                in List.filter anyThreat oppMovesAfter end
+
+            fun threatenedOpp () =
+                let
+                    val myMovesAfter =
+                        generate_color_move_order base_after isWhite
+                            true true true true true true
+
+                    fun anyThreat (_,toSq) =
+                        let val idx = coord_to_index toSq
+                            val bb = Word64.<<(0w1, Word.fromInt idx)
+                        in List.exists (fn pbb => Word64.andb(bb,pbb)<>0w0) oppPieces end
+                in List.filter anyThreat myMovesAfter end
+
+            val threatenedOppValue =
+                foldl (fn ((_,sq),acc) =>
+                    acc + piece_value_threat
+                            (Word64.<<(0w1, Word.fromInt (coord_to_index sq)))
+                            base_after isWhite
+                ) 0 (threatenedOpp ())
+
+            val threatenedOwnValue =
+                foldl (fn ((_,sq),acc) =>
+                    acc + 2 * piece_value_threat
+                            (Word64.<<(0w1, Word.fromInt (coord_to_index sq)))
+                            base_after (not isWhite)
+                ) 0 (threatenedOwn ())
+
+            val score =
+                score_init
+                + scoreA
+                + capturedValue
+                + threatenedOppValue
+                - threatenedOwnValue
+        in
+            score
+        end
+
+
+    fun merge ([], ys) = ys
+    | merge (xs, []) = xs
+    | merge ((x as (s1,_))::xs1, (y as (s2,_))::ys1) =
+            if s1 >= s2 then
+                x :: merge(xs1, y::ys1)
+            else
+                y :: merge(x::xs1, ys1)
+
+    (* split list into two halves *)
+    fun split xs =
+        let
+            fun take (0, acc, rest) = (List.rev acc, rest)
+            | take (n, acc, x::rest) = take (n-1, x::acc, rest)
+            | take (_, acc, []) = (List.rev acc, [])
+            val n = length xs div 2
+        in
+            take (n, [], xs)
+        end
+
+    (* stable mergesort for lists of (score, move) pairs *)
+    fun msort [] = []
+    | msort [x] = [x]
+    | msort xs =
+            let
+                val (l, r) = split xs
+            in
+                merge (msort l, msort r)
+            end
+
+    (* order_moves: evaluate → sort → extract *)
+    fun order_moves brep isWhite moves =
+        let
+            val scored : (int * move) list =
+                List.map (fn m => (evaluate_move brep isWhite m, m)) moves
+            val sorted_pairs = msort scored
+        in
+            sorted_pairs
+        end
+
+    
+    fun print_ordered_moves pairs =
+    let
+        fun printOne (score, ((fx, fy), (tx, ty))) =
+            print (Int.toString score ^ " : (" ^
+                   Int.toString fx ^ "," ^ Int.toString fy ^ ") -> (" ^
+                   Int.toString tx ^ "," ^ Int.toString ty ^ ")\n")
+    in
+        List.app printOne pairs
+    end
+
 
 end

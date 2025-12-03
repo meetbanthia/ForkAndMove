@@ -329,6 +329,8 @@ fun test_move_ordering_color () =
         (* 2. Only Knights *)
         val _ = print "\n--- White Knights Only ---\n"
         val knight_moves = MoveGenerator.generate_color_move_order b0 true false true false false false false
+        val knight_moves_ordered = MoveGenerator.order_moves b0 true knight_moves
+        val _ = MoveGenerator.print_ordered_moves knight_moves_ordered
         val _ = List.app (fn m => print (move_to_string m ^ " ")) knight_moves
         val _ = print ("\nCount: " ^ Int.toString (length knight_moves) ^ "\n")
 
