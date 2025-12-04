@@ -1110,6 +1110,6 @@ fun evaluate_test () =
 (* Execution *)
 (* val _ = apply_move_tests () *)
 (* val _ = test_move_ordering_color () *)
-val _ = test_capture_and_block_logic ()
-(* val _ = evaluate_test () *)
+(* val _ = test_capture_and_block_logic () *)
+val _ = evaluate_test ()
 

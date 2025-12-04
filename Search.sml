@@ -81,15 +81,15 @@ struct
                         else 0 (* Ignore King captures in threats *)
                 end
 
-            fun sum_threats moves targetIsWhite =
+            fun max_threat moves targetIsWhite =
                 List.foldl (fn ((_, dest), acc) => 
-                    acc + (get_piece_value_at bmaps dest targetIsWhite)
+                    Int.max(acc, get_piece_value_at bmaps dest targetIsWhite)
                 ) 0 moves
             
             (* White threats against Black pieces *)
-            val white_threats = sum_threats white_moves false
+            val white_threats = max_threat white_moves false
             (* Black threats against White pieces *)
-            val black_threats = sum_threats black_moves true
+            val black_threats = max_threat black_moves true
             
             (* Weight threats based on turn *)
             val (w_weight, b_weight) = 
