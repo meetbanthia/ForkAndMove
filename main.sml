@@ -52,24 +52,33 @@ struct
             Board.board_representation board_arr
         end
 
-    fun find_best_move board depth maximizing_player =
-        (* Search.alpha_beta_search board depth maximizing_player Real.negInf Real.posInf Search.eval_position *)
-        (* For now just returned this to test functionality of other *)
-        Search.alpha_beta_search board depth maximizing_player Real.negInf Real.posInf Search.eval_position MoveGenerator.generate_ordered_moves MoveGenerator.apply_move
+    (* Helper to check for command line flags *)
+    fun has_flag key =
+        List.exists (fn s => s = ("-" ^ key)) (CommandLine.arguments())
 
-fun run () =
-    let
-        (* Default FEN: Standard starting position *)
-        val default_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-        
-        (* Parse command line args *)
-        val fen_arg = CommandLineArgs.parseString "fen" ""
-        val file_arg = CommandLineArgs.parseString "file" ""
-        val depth = CommandLineArgs.parseInt "depth" 4
-        val moves = CommandLineArgs.parseInt "moves" 10
-        
-        (* Determine source of FEN *)
-        val fen = 
+    fun find_best_move board depth maximizing_player use_alphabeta =
+        if use_alphabeta then
+            Search.alpha_beta_search board depth maximizing_player Real.negInf Real.posInf Search.eval_position MoveGenerator.generate_ordered_moves MoveGenerator.apply_move
+        else
+            Search.minimax board depth maximizing_player Search.eval_position MoveGenerator.apply_move MoveGenerator.generate_ordered_moves
+
+    fun run () =
+        let
+            (* Default FEN: Standard starting position *)
+            val default_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            
+            (* Parse command line args *)
+            val fen_arg = CommandLineArgs.parseString "fen" ""
+            val file_arg = CommandLineArgs.parseString "file" ""
+            val depth = CommandLineArgs.parseInt "depth" 4
+            val moves = CommandLineArgs.parseInt "moves" 10
+            
+            (* Search algorithm flags *)
+            val use_alphabeta = has_flag "alphabeta"
+            val use_minimax = has_flag "minimax" (* Explicit flag, though currently default *)
+            
+            (* Determine source of FEN *)
+            val fen =
             if file_arg <> "" then 
                 (print ("Reading FEN from file: " ^ file_arg ^ "\n");
                  read_file file_arg)
@@ -98,6 +107,7 @@ fun run () =
         val _ = print ("FEN: " ^ minimal_fen ^ "\n")
         val _ = print ("Turn: " ^ (if is_white then "White" else "Black") ^ "\n")
         val _ = print ("Depth: " ^ Int.toString depth ^ "\n")
+        val _ = print ("Algorithm: " ^ (if use_alphabeta then "Alpha-Beta" else "Minimax") ^ "\n")
         val _ = print "========================================\n"
 
         (* Initialize board *)
@@ -110,7 +120,7 @@ fun run () =
             let
                 val _ = Board.print_board board
                 val _ = print ("\n" ^ (if turn then "White" else "Black") ^ "'s move (Depth " ^ Int.toString depth ^ ")...\n")
-                val (score, best_move_opt) = find_best_move board depth turn
+                val (score, best_move_opt) = find_best_move board depth turn use_alphabeta
             in
                 case best_move_opt of
                     SOME m =>
