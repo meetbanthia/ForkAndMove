@@ -125,10 +125,11 @@ struct
             val n2 = Word64.<< (Word64.andb(n, not_a_file), Word.fromInt 17)
             val n3 = Word64.<< (Word64.andb(n, not_gh_file), Word.fromInt 6)
             val n4 = Word64.<< (Word64.andb(n, not_ab_file), Word.fromInt 10)
-            val n5 = Word64.andb(Word64.>> (n, Word.fromInt 15), not_h_file)
-            val n6 = Word64.andb(Word64.>> (n, Word.fromInt 17), not_a_file)
-            val n7 = Word64.andb(Word64.>> (n, Word.fromInt 6), not_gh_file)
-            val n8 = Word64.andb(Word64.>> (n, Word.fromInt 10), not_ab_file)
+            val n5 = Word64.>> (Word64.andb(n, not_h_file), Word.fromInt 15)
+            val n6 = Word64.>> (Word64.andb(n, not_a_file), Word.fromInt 17)
+            val n7 = Word64.>> (Word64.andb(n, not_gh_file), Word.fromInt 6)
+            val n8 = Word64.>> (Word64.andb(n, not_ab_file), Word.fromInt 10)
+
             val moves = Word64.orb(n1,
                         Word64.orb(n2,
                         Word64.orb(n3,
