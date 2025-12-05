@@ -6,11 +6,7 @@ sig
     val eval_position: Board.brep -> bool -> real
 
 (* node depth maximizingPlayer alpha beta evaluate *)
-<<<<<<< HEAD
-    val alpha_beta_search: 'a -> int -> bool -> real -> real -> ('a -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> real * 'b option
-=======
-    val alpha_beta_search: Board.brep -> int -> bool -> real -> real -> (Board.brep -> bool -> real) -> real
->>>>>>> 370ddabc232b6e93683461aa9b82eaeb32d9f6bb
+    val alpha_beta_search: 'a -> int -> bool -> real -> real -> ('a -> bool -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> real * 'b option
 end =
 struct
 
@@ -134,13 +130,8 @@ struct
             end 
     *)
     
-<<<<<<< HEAD
-    fun alpha_beta_search (node : 'a) depth maximizingPlayer alpha beta (evaluate : 'a -> real) (next_nodes : 'a -> bool -> 'b list) (next_state : 'a -> 'b -> 'a) =
-        if depth = 0 then (evaluate node, NONE)
-=======
-    fun alpha_beta_search node depth maximizingPlayer alpha beta evaluate =
-        if depth = 0 then evaluate node maximizingPlayer
->>>>>>> 370ddabc232b6e93683461aa9b82eaeb32d9f6bb
+    fun alpha_beta_search (node : 'a) depth maximizingPlayer alpha beta (evaluate : 'a -> bool -> real) (next_nodes : 'a -> bool -> 'b list) (next_state : 'a -> 'b -> 'a) =
+        if depth = 0 then (evaluate node maximizingPlayer, NONE)
         else
             let
                 val moves = Seq.fromList (next_nodes node maximizingPlayer)
@@ -167,13 +158,8 @@ struct
                 else loop 0 alpha beta Real.posInf NONE
             end
 
-<<<<<<< HEAD
     fun pvs_search node depth maximizingPlayer alpha beta evaluate next_nodes next_state =
-        if depth = 0 then evaluate node
-=======
-    fun pvs_search node depth maximizingPlayer alpha beta evaluate =
         if depth = 0 then evaluate node maximizingPlayer
->>>>>>> 370ddabc232b6e93683461aa9b82eaeb32d9f6bb
         else
             let
                 val moves = Seq.fromList (next_nodes node maximizingPlayer)
