@@ -33,7 +33,7 @@ This will generate an executable named `main`.
 
 ### Usage
 
-Run the engine by providing a board state via a file or direct FEN string.
+The engine can play a game starting from a specific board state provided via a file or direct FEN string. It supports different search algorithms and game settings.
 
 **1. Using a FEN file:**
 Create a text file (e.g., `board.txt`) containing a FEN string:
@@ -55,13 +55,29 @@ Then run:
 ./main
 ```
 
-**Options:**
-- `-depth <n>`: Set the search depth (default is 4).
+### Command Line Arguments
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-fen "<string>"` | Set the initial board state using FEN notation. | Standard Start |
+| `-file <path>` | Read FEN string from a file. | None |
+| `-depth <n>` | Set the search depth for the AI. | 4 |
+| `-moves <n>` | Set the maximum number of moves to simulate in the game loop. | 10 |
+| `-alphabeta` | Use the **Alpha-Beta Pruning** search algorithm. | Disabled (Minimax used) |
+| `-minimax` | Use the **Minimax** search algorithm. | Enabled (Default) |
+
+**Examples:**
+
+Run a game with Alpha-Beta pruning at depth 6 for 20 moves:
+```bash
+./main -alphabeta -depth 6 -moves 20
+```
 
 ## Current Status
-- Move generation and board representation are implemented.
-- Parallel Alpha-Beta search structure is in place.
-- The engine currently mocks the "best move" selection while the search integration is being finalized.
+- **Core**: Bitboard representation and move generation are fully implemented.
+- **Evaluation**: Material counting and threat detection (forks, pins, direct attacks).
+- **Search**: Parallel Minimax and Alpha-Beta pruning implementations are functional.
+- **Gameplay**: The engine can play against itself or simulate games from a given position.
 
 ## Contributors
 - Meet Banthia - MSCS, NYU Courant

@@ -112,7 +112,7 @@ struct
         end
 
 
-    fun minimax node depth maximizingPlayer evaluate apply_move order =
+    fun minimax_full_parallel node depth maximizingPlayer evaluate apply_move order =
             if depth = 0 then 
                 (evaluate node maximizingPlayer, NONE)
             else
@@ -127,7 +127,7 @@ struct
                     val child_boards = Seq.map (fn(i) => apply_move node i) move_order
 
                     (* val _ = print( "Searching for all childrens" ^ "\n") *)
-                    val best_scores_and_moves = Seq.map (fn(i) => minimax i (depth-1) next_turn evaluate apply_move order) child_boards
+                    val best_scores_and_moves = Seq.map (fn(i) => minimax_full_parallel i (depth-1) next_turn evaluate apply_move order) child_boards
 
                     val len = Seq.length best_scores_and_moves
                     val best_move_idx = 
@@ -163,6 +163,62 @@ struct
                     else
                         (#1 (Seq.nth best_scores_and_moves best_move_idx), SOME (Seq.nth move_order best_move_idx))
                 end 
+
+    fun minimax_evaluate_parallel node depth maximizingPlayer evaluate apply_move order =
+            if depth = 0 then 
+                (evaluate node maximizingPlayer, NONE)
+            else
+                let
+                    (* val _ = print ("Enter Depth : " ^ (Int.toString depth) ^ "\n") *)
+                    val next_turn = not maximizingPlayer
+                    val mo = order node maximizingPlayer
+
+                    val move_order = Seq.fromList mo
+                    val len = Seq.length move_order
+                    val _ = print ((Int.toString len) ^ " ")
+                    (* val _ = print ("Generated Move Ordering" ^ "\n") *)
+
+                    val child_boards = Seq.map (fn(i) => apply_move node i) move_order
+
+                    fun f i = #1 (minimax_evaluate_parallel i (depth-1) next_turn evaluate apply_move order)
+                    (* val _ = print( "Searching for all childrens" ^ "\n") *)
+                    val best_scores = if depth = 1 then  Seq.map f child_boards
+                                      else Seq.fromList (List.map f (Seq.toList child_boards))
+
+                    val best_move_idx = 
+                        if maximizingPlayer then
+                            Parallel.reduce 
+                                (fn(a,b) => 
+                                    let 
+                                        val sa = Seq.nth best_scores a
+                                        val sb = Seq.nth best_scores b
+                                    in
+                                        if sa>sb then a
+                                        else b
+                                    end
+                                ) 
+                                (~1) (0, len) (fn(i) => i)
+                        else 
+                            Parallel.reduce 
+                                (fn(a,b) => 
+                                    let 
+                                        val sa = Seq.nth best_scores a
+                                        val sb = Seq.nth best_scores b
+                                    in
+                                        if sa<sb then a
+                                        else b
+                                    end
+                                ) 
+                                (~1) (0, len) (fn(i) => i)
+
+                    (* val _ = print ("Found Best Move" ^ "\n") *)
+                in
+                    if best_move_idx = ~1 then
+                        if maximizingPlayer then (Real.negInf, NONE) else (Real.posInf, NONE)
+                    else
+                        ((Seq.nth best_scores best_move_idx), SOME (Seq.nth move_order best_move_idx))
+                end 
+
     
     fun alpha_beta_search (node : 'a) depth maximizingPlayer alpha beta (evaluate : 'a -> bool -> real) (next_nodes : 'a -> bool -> 'b list) (next_state : 'a -> 'b -> 'a) =
         if depth = 0 then (evaluate node maximizingPlayer, NONE)
