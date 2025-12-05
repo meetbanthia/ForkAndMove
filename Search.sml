@@ -150,7 +150,7 @@ struct
                                     if score < best_score then (alpha, Real.min(beta, score), SOME move)
                                     else (alpha, Real.min(beta, score), best_move)
                         in
-                            if a >= b then (score, best_child)
+                            if a >= b then (best_score, best_child)
                             else loop (i+1) a b (if maximizingPlayer then Real.max(best_score, score) else Real.min(best_score, score)) best_child
                         end
             in
