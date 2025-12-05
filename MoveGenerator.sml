@@ -295,33 +295,100 @@ struct
             val (P,R,N,B,K,Q,p,r,n,b,k,q) = brep
             val (ooc_white, occ_black) = occupancy (P,R,N,B,K,Q,p,r,n,b,k,q)
             (* White moves *)
-            val w_p_moves = generate_pawn_moves P ooc_white occ_black true
-            val w_n_moves = generate_knight_moves N ooc_white
-            val w_k_moves = generate_king_moves K ooc_white
-            val w_r_moves = generate_sliding_moves R ooc_white occ_black true rook_moves
-            val w_b_moves = generate_sliding_moves B ooc_white occ_black true bishop_moves
-            val w_q_moves = generate_sliding_moves Q ooc_white occ_black true queen_moves
+            (* val w_p_moves = if white then generate_pawn_moves P ooc_white occ_black true else []
+            val w_n_moves = if white then generate_knight_moves N ooc_white else []
+            val w_k_moves = if white then generate_king_moves K ooc_white else []
+            val w_r_moves = if white then generate_sliding_moves R ooc_white occ_black true rook_moves else []
+            val w_b_moves = if white then generate_sliding_moves B ooc_white occ_black true bishop_moves else []
+            val w_q_moves = if white then generate_sliding_moves Q ooc_white occ_black true queen_moves else [] *)
+            val (w_p_moves,
+                (w_n_moves,
+                (w_k_moves,
+                (w_r_moves,
+                    (w_b_moves, w_q_moves))))) = if white 
+                    then
+                    ForkJoin.par (fn () =>
+                        if pawn then generate_pawn_moves P ooc_white occ_black true else []
+                        ,
+                        fn () =>
+                        ForkJoin.par (fn () =>
+                            if knight then generate_knight_moves N ooc_white else []
+                            ,
+                            fn () =>
+                            ForkJoin.par (fn () =>
+                                if king then generate_king_moves K ooc_white else []
+                                ,
+                                fn () =>
+                                ForkJoin.par (fn () =>
+                                    if rook then generate_sliding_moves R ooc_white occ_black true rook_moves else []
+                                    ,
+                                    fn () =>
+                                    ForkJoin.par (fn () =>
+                                        if bishop then generate_sliding_moves B ooc_white occ_black true bishop_moves else []
+                                        ,
+                                        fn () =>
+                                        if queen then generate_sliding_moves Q ooc_white occ_black true queen_moves else []
+                                    )
+                                )
+                            )
+                        )
+                    )
+                    else 
+                        ([], ([], ([], ([], ([], [])))))
+
             (* Black moves *)
-            val b_P_moves = generate_pawn_moves p ooc_white occ_black false
-            val b_N_moves = generate_knight_moves n occ_black
-            val b_K_moves = generate_king_moves k occ_black
-            val b_R_moves = generate_sliding_moves r ooc_white occ_black false rook_moves
-            val b_B_moves = generate_sliding_moves b ooc_white occ_black false bishop_moves
-            val b_Q_moves = generate_sliding_moves q ooc_white occ_black false queen_moves
+            (* val b_P_moves = if not white then generate_pawn_moves p ooc_white occ_black false else []
+            val b_N_moves = if not white then generate_knight_moves n occ_black else []
+            val b_K_moves = if not white then generate_king_moves k occ_black else []
+            val b_R_moves = if not white then generate_sliding_moves r ooc_white occ_black false rook_moves else []
+            val b_B_moves = if not white then generate_sliding_moves b ooc_white occ_black false bishop_moves else []
+            val b_Q_moves = if not white then generate_sliding_moves q ooc_white occ_black false queen_moves else [] *)
+
+            val (b_P_moves,
+                (b_N_moves,
+                (b_K_moves,
+                (b_R_moves,
+                    (b_B_moves, b_Q_moves))))) = if not white then
+                    ForkJoin.par (fn () =>
+                        if pawn then generate_pawn_moves p ooc_white occ_black false else []
+                        ,
+                        fn () =>
+                        ForkJoin.par (fn () =>
+                            if knight then generate_knight_moves n ooc_white else []
+                            ,
+                            fn () =>
+                            ForkJoin.par (fn () =>
+                                if king then generate_king_moves k ooc_white else []
+                                ,
+                                fn () =>
+                                ForkJoin.par (fn () =>
+                                    if not rook then generate_sliding_moves r ooc_white occ_black false rook_moves else []
+                                    ,
+                                    fn () =>
+                                    ForkJoin.par (fn () =>
+                                        if not bishop then generate_sliding_moves n ooc_white occ_black false bishop_moves else []
+                                        ,
+                                        fn () =>
+                                        if not queen then generate_sliding_moves q ooc_white occ_black false queen_moves else []
+                                    )
+                                )
+                            )
+                        )
+            ) else ([], ([], ([], ([], ([], [])))))
+
         in
-            []
-                @ (if white andalso pawn   then w_p_moves else [])
-                @ (if white andalso knight then w_n_moves else [])
-                @ (if white andalso king   then w_k_moves else [])
-                @ (if white andalso rook   then w_r_moves else [])
-                @ (if white andalso bishop then w_b_moves else [])
-                @ (if white andalso queen  then w_q_moves else [])
-                @ (if (not white) andalso pawn   then b_P_moves else [])
-                @ (if (not white) andalso knight then b_N_moves else [])
-                @ (if (not white) andalso king   then b_K_moves else [])
-                @ (if (not white) andalso rook   then b_R_moves else [])
-                @ (if (not white) andalso bishop then b_B_moves else [])
-                @ (if (not white) andalso queen  then b_Q_moves else [])
+                w_p_moves
+                @  w_n_moves 
+                @  w_k_moves 
+                @  w_r_moves 
+                @  w_b_moves 
+                @  w_q_moves 
+                @  b_P_moves 
+                @  b_N_moves 
+                @  b_K_moves 
+                @  b_R_moves 
+                @  b_B_moves 
+                @  b_Q_moves 
         end
     (* --- Apply move --- *)
 
