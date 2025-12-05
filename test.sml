@@ -371,24 +371,24 @@ fun test_capture_and_block_logic () =
             
             (* assume: board_list : (char Array.array Array.array) list *)
 
-            fun run_test_on_board board =
+            fun run_test_on_board isWhite board  =
                 let
                     (* board is already Array2-compatible structure *)
                     val b = Board.board_representation board
 
                     val moves =
                         MoveGenerator.generate_color_move_order
-                            b false true true true true true true
+                            b isWhite false true false false false false
 
                     val _ = print "\n===========================\n"
                     val _ = print "BOARD:\n"
                     val _ = Board.print_board b
-
+                    val _ = print ("Side to move: " ^ (if isWhite then "White\n" else "Black\n"))
                     val _ = print "\nGenerated Moves:\n"
                     val _ = List.app (fn m => print (move_to_string m ^ " ")) moves
                     val _ = print "\n"
 
-                    val ordered = MoveGenerator.order_moves b false moves
+                    val ordered = MoveGenerator.order_moves b isWhite moves
 
                     val _ = print "\nOrdered Moves:\n"
                     val _ = MoveGenerator.print_ordered_moves ordered
@@ -397,7 +397,12 @@ fun test_capture_and_block_logic () =
                     ()
                 end
             fun run_all_boards boards =
-                List.app run_test_on_board boards
+                let 
+                    val _ = List.app (run_test_on_board true) boards
+                    val _ = List.app (run_test_on_board false) boards
+                in
+                    ()
+                end
 
         val _ = print_header "TEST: Capture and Friendly Block Logic"
 
@@ -850,7 +855,16 @@ fun test_capture_and_block_logic () =
          [#" ",#"N",#" ",#"P",#" ",#" ",#" ",#" "],
          [#" ",#"P",#" ",#" ",#"P",#"P",#"P",#"P"],
          [#"R",#" ",#"B",#"Q",#"K",#" ",#" ",#"R"]
-        ]
+        ], 
+        array2_of_lists (8,8) [
+            [#"r",#"n",#"b",#"q",#" ",#"r",#"k",#" "],
+             [#"p",#"p",#" ",#" ",#"p",#"p",#"p",#"p"],
+             [#" ",#" ",#" ",#" ",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#"p",#"B",#" ",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#"P",#" ",#" ",#" "],
+             [#" ",#" ",#" ",#" ",#" ",#"N",#" ",#" "],
+             [#"P",#"P",#"P",#"P",#" ",#"P",#"P",#"P"],
+             [#"R",#"N",#"B",#"Q",#"K",#" ",#" ",#"R"]]
         ];
 
         val _ = run_all_boards board_list
@@ -988,8 +1002,8 @@ fun evaluate_test () =
 
 
 (* Execution *)
-(* val _ = apply_move_tests () *)
-(* val _ = test_move_ordering_color () *)
+val _ = apply_move_tests ()
+val _ = test_move_ordering_color ()
 val _ = test_capture_and_block_logic ()
-(* val _ = evaluate_test () *)
+val _ = evaluate_test ()
 

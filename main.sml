@@ -55,67 +55,79 @@ struct
     fun find_best_move board depth maximizing_player =
         (* Search.alpha_beta_search board depth maximizing_player Real.negInf Real.posInf Search.eval_position *)
         (* For now just returned this to test functionality of other *)
-        (100.0, SOME ((1,2),(3,4)))
+        Search.alpha_beta_search board depth maximizing_player Real.negInf Real.posInf Search.eval_position MoveGenerator.generate_ordered_moves MoveGenerator.apply_move
 
-    fun run () =
-        let
-            (* Default FEN: Standard starting position *)
-            val default_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-            
-            (* Parse command line args *)
-            val fen_arg = CommandLineArgs.parseString "fen" ""
-            val file_arg = CommandLineArgs.parseString "file" ""
-            val depth = CommandLineArgs.parseInt "depth" 4
-            
-            (* Determine source of FEN *)
-            val fen = 
-                if file_arg <> "" then 
-                    (print ("Reading FEN from file: " ^ file_arg ^ "\n");
-                     read_file file_arg)
-                else if fen_arg <> "" then 
-                    fen_arg
-                else 
-                    default_fen
+fun run () =
+    let
+        (* Default FEN: Standard starting position *)
+        val default_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        
+        (* Parse command line args *)
+        val fen_arg = CommandLineArgs.parseString "fen" ""
+        val file_arg = CommandLineArgs.parseString "file" ""
+        val depth = CommandLineArgs.parseInt "depth" 4
+        val moves = CommandLineArgs.parseInt "moves" 10
+        
+        (* Determine source of FEN *)
+        val fen = 
+            if file_arg <> "" then 
+                (print ("Reading FEN from file: " ^ file_arg ^ "\n");
+                 read_file file_arg)
+            else if fen_arg <> "" then 
+                fen_arg
+            else 
+                default_fen
 
-            (* Extract turn from FEN *)
-            val tokens = String.tokens (fn c => c = #" ") fen
-            val is_white = 
-                if length tokens >= 2 then 
-                    List.nth(tokens, 1) = "w"
-                else 
-                    true (* Default to white if not specified *)
+        (* Extract turn from FEN *)
+        val tokens = String.tokens (fn c => c = #" ") fen
+        val is_white = 
+            if length tokens >= 2 then 
+                List.nth(tokens, 1) = "w"
+            else 
+                true (* Default to white if not specified *)
 
-            (* Reconstruct minimal FEN (Placement + Turn) *)
-            (* We ignore castling (3), en passant (4), halfmove (5), fullmove (6) *)
-            val minimal_fen = 
-                if length tokens >= 2 then
-                    List.nth(tokens, 0) ^ " " ^ List.nth(tokens, 1)
-                else
-                    fen (* Fallback if parsing fails or already minimal *)
-            
-            val _ = print "\n========================================\n"
-            val _ = print "      Chess Engine Initialization       \n"
-            val _ = print ("FEN: " ^ minimal_fen ^ "\n")
-            val _ = print ("Turn: " ^ (if is_white then "White" else "Black") ^ "\n")
-            val _ = print ("Depth: " ^ Int.toString depth ^ "\n")
-            val _ = print "========================================\n"
+        (* Reconstruct minimal FEN (Placement + Turn) *)
+        val minimal_fen = 
+            if length tokens >= 2 then
+                List.nth(tokens, 0) ^ " " ^ List.nth(tokens, 1)
+            else
+                fen (* Fallback if parsing fails or already minimal *)
 
-            val b0 = fen_to_board fen
-            val _ = Board.print_board(b0)
-            
-            val _ = print ("\nSearching for best move (Depth " ^ Int.toString depth ^ ")...\n")
-            
-            val (score, best_move_opt) = find_best_move b0 depth is_white
-        in
-            case best_move_opt of
-                SOME m => 
-                    (print ("\nBest Move: " ^ move_to_string m ^ "\n");
-                     print ("Score: " ^ Real.toString score ^ "\n");
-                     print ("\nBoard after move:\n");
-                     let val b1 = MoveGenerator.apply_move b0 m 
-                     in Board.print_board b1 end)
-              | NONE => print "\nNo legal moves found.\n"
-        end
+        val _ = print "\n========================================\n"
+        val _ = print "      Chess Engine Initialization       \n"
+        val _ = print ("FEN: " ^ minimal_fen ^ "\n")
+        val _ = print ("Turn: " ^ (if is_white then "White" else "Black") ^ "\n")
+        val _ = print ("Depth: " ^ Int.toString depth ^ "\n")
+        val _ = print "========================================\n"
+
+        (* Initialize board *)
+        val board0 = fen_to_board fen
+
+        (* Recursive loop to play the game *)
+        fun game_loop board turn iter limit =
+            if iter > limit then ()
+            else
+            let
+                val _ = Board.print_board board
+                val _ = print ("\n" ^ (if turn then "White" else "Black") ^ "'s move (Depth " ^ Int.toString depth ^ ")...\n")
+                val (score, best_move_opt) = find_best_move board depth turn
+            in
+                case best_move_opt of
+                    SOME m =>
+                        let
+                            val _ = print ("Move chosen: " ^ move_to_string m ^ "\n")
+                            val _ = print ("Score: " ^ Real.toString score ^ "\n")
+                            val new_board = MoveGenerator.apply_move board m
+                        in
+                            game_loop new_board (not turn) (iter + 1) limit
+                        end
+                  | NONE =>
+                        (print ("\nNo legal moves found for " ^ (if turn then "White" else "Black") ^ ". Game over.\n");
+                         ())
+            end
+    in
+        game_loop board0 is_white 0 moves
+    end
 end
 
 val _ = Main.run()

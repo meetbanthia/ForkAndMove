@@ -6,7 +6,7 @@ sig
     val eval_position: Board.brep -> real
 
 (* node depth maximizingPlayer alpha beta evaluate *)
-    val alpha_beta_search: Board.brep -> int -> bool -> real -> real -> (Board.brep -> real) -> real
+    val alpha_beta_search: 'a -> int -> bool -> real -> real -> ('a -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> real * 'b option
 end =
 struct
 
@@ -80,37 +80,44 @@ struct
             end 
     *)
     
-    fun alpha_beta_search node depth maximizingPlayer alpha beta evaluate =
-        if depth = 0 then evaluate node
+    fun alpha_beta_search (node : 'a) depth maximizingPlayer alpha beta (evaluate : 'a -> real) (next_nodes : 'a -> bool -> 'b list) (next_state : 'a -> 'b -> 'a) =
+        if depth = 0 then (evaluate node, NONE)
         else
-            let   
-                val moves = Seq.fromList (MoveGenerator.generate_move_order node)
-                val child_nodes = Seq.map (fn(x) => MoveGenerator.apply_move node x) moves            
-                fun loop node i alpha beta maximizingPlayer =
-                    if i >= (Seq.length child_nodes) orelse beta <= alpha then 
-                        if maximizingPlayer then Real.negInf else Real.posInf
+            let
+                val moves = Seq.fromList (next_nodes node maximizingPlayer)
+                val child_nodes = Seq.map (fn x => (x, next_state node x)) moves
+                fun loop i alpha beta best_score best_move =
+                    if i >= Seq.length child_nodes orelse beta <= alpha then (best_score, best_move)
                     else
                         let
-                            val child_node = Seq.nth child_nodes i
-                            val score = alpha_beta_search child_node (depth-1) (not maximizingPlayer) alpha beta evaluate
-                            val (a, b) = if maximizingPlayer then (Real.max(alpha, score),beta) else (alpha, Real.min(beta, score))
-                            val f = if maximizingPlayer then Real.max else Real.min
+                            val (move, child_node) = Seq.nth child_nodes i
+                            val (score, _) = alpha_beta_search child_node (depth-1) (not maximizingPlayer) alpha beta evaluate next_nodes next_state
+                            val (a, b, best_child) =
+                                if maximizingPlayer then
+                                    if score > best_score then (Real.max(alpha, score), beta, SOME move)
+                                    else (Real.max(alpha, score), beta, best_move)
+                                else
+                                    if score < best_score then (alpha, Real.min(beta, score), SOME move)
+                                    else (alpha, Real.min(beta, score), best_move)
                         in
-                            f(score, loop child_node (i+1) a b maximizingPlayer)
+                            if a >= b then (score, best_child)
+                            else loop (i+1) a b (if maximizingPlayer then Real.max(best_score, score) else Real.min(best_score, score)) best_child
                         end
             in
-                loop node 0 alpha beta maximizingPlayer
+                if maximizingPlayer then loop 0 alpha beta Real.negInf NONE
+                else loop 0 alpha beta Real.posInf NONE
             end
 
-    fun pvs_search node depth maximizingPlayer alpha beta evaluate =
+    fun pvs_search node depth maximizingPlayer alpha beta evaluate next_nodes next_state =
         if depth = 0 then evaluate node
         else
             let
-                val moves = Seq.fromList (MoveGenerator.generate_move_order node)
-                val child_nodes = Seq.map (fn(x) => MoveGenerator.apply_move node x) moves
+                val moves = Seq.fromList (next_nodes node maximizingPlayer)
+                val child_nodes = Seq.map (fn(x) => next_state node x) moves
                 val left_most_node = Seq.nth child_nodes 0
-                val score1 = pvs_search left_most_node (depth-1) (not maximizingPlayer) alpha beta evaluate
-                val rest_scores = Seq.map (fn(x) => alpha_beta_search x (depth-1) (not maximizingPlayer) alpha beta evaluate) child_nodes
+                val score1 = pvs_search left_most_node (depth-1) (not maximizingPlayer) alpha beta evaluate next_nodes next_state
+                val rest_scores = Seq.map (fn(x) => alpha_beta_search x (depth-1) (not maximizingPlayer) alpha beta evaluate next_nodes next_state) child_nodes
+                val rest_scores = Seq.map #1 rest_scores
                 val (a,b) = if maximizingPlayer then (Real.max(score1,alpha), beta) else (alpha, Real.min(beta, score1))
                 val f = if maximizingPlayer then Real.max else Real.min
             in
