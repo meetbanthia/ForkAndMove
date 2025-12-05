@@ -3,10 +3,14 @@ This is where parallelism comes into consideration*)
 
 structure  Search:
 sig
-    val eval_position: Board.brep -> real
+    val eval_position: Board.brep -> bool -> real
 
 (* node depth maximizingPlayer alpha beta evaluate *)
+<<<<<<< HEAD
     val alpha_beta_search: 'a -> int -> bool -> real -> real -> ('a -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> real * 'b option
+=======
+    val alpha_beta_search: Board.brep -> int -> bool -> real -> real -> (Board.brep -> bool -> real) -> real
+>>>>>>> 370ddabc232b6e93683461aa9b82eaeb32d9f6bb
 end =
 struct
 
@@ -52,12 +56,62 @@ struct
             white_side - black_side
         end
 
-    fun eval_position bmaps =
+    fun calculate_threats bmaps isWhiteTurn =
+        let
+            (* Generate all pseudo-legal moves for both sides *)
+            val white_moves = MoveGenerator.generate_color_move_order bmaps true true true true true true true
+            val black_moves = MoveGenerator.generate_color_move_order bmaps false true true true true true true
+            
+            (* We need to know what piece is at a destination square to value the threat *)
+            fun get_piece_value_at (P,R,N,B,K,Q,p,r,n,b,k,q) (row,col) isWhiteTarget =
+                let
+                    val idx = (7-row)*8 + (7-col)
+                    val mask = Word64.<< (0w1, Word.fromInt idx)
+                    fun has bb = Word64.andb(bb, mask) <> 0w0
+                in
+                    if isWhiteTarget then
+                        if has P then PieceTable.piece_value #"P"
+                        else if has N then PieceTable.piece_value #"N"
+                        else if has B then PieceTable.piece_value #"B"
+                        else if has R then PieceTable.piece_value #"R"
+                        else if has Q then PieceTable.piece_value #"Q"
+                        else 0 (* Ignore King captures in threats *)
+                    else
+                        if has p then PieceTable.piece_value #"p"
+                        else if has n then PieceTable.piece_value #"n"
+                        else if has b then PieceTable.piece_value #"b"
+                        else if has r then PieceTable.piece_value #"r"
+                        else if has q then PieceTable.piece_value #"q"
+                        else 0 (* Ignore King captures in threats *)
+                end
+
+            fun max_threat moves targetIsWhite =
+                List.foldl (fn ((_, dest), acc) => 
+                    Int.max(acc, get_piece_value_at bmaps dest targetIsWhite)
+                ) 0 moves
+            
+            (* White threats against Black pieces *)
+            val white_threats = max_threat white_moves false
+            (* Black threats against White pieces *)
+            val black_threats = max_threat black_moves true
+            
+            (* Weight threats based on turn *)
+            val (w_weight, b_weight) = 
+                if isWhiteTurn then (1.0, 0.2)  (* White active, Black passive *)
+                else (0.2, 1.0)                 (* White passive, Black active *)
+                
+            val white_score = Real.fromInt(white_threats) * w_weight
+            val black_score = Real.fromInt(black_threats) * b_weight
+        in
+            (white_score - black_score) (* Full threat value *)
+        end
+
+    fun eval_position bmaps isWhiteTurn =
         let
             val material_factor = material bmaps
-            (*Need to add other factors too like mobility *)
+            val threat_factor = calculate_threats bmaps isWhiteTurn
         in
-            Real.fromInt material_factor
+            Real.fromInt material_factor + threat_factor
         end
 
 
@@ -80,8 +134,13 @@ struct
             end 
     *)
     
+<<<<<<< HEAD
     fun alpha_beta_search (node : 'a) depth maximizingPlayer alpha beta (evaluate : 'a -> real) (next_nodes : 'a -> bool -> 'b list) (next_state : 'a -> 'b -> 'a) =
         if depth = 0 then (evaluate node, NONE)
+=======
+    fun alpha_beta_search node depth maximizingPlayer alpha beta evaluate =
+        if depth = 0 then evaluate node maximizingPlayer
+>>>>>>> 370ddabc232b6e93683461aa9b82eaeb32d9f6bb
         else
             let
                 val moves = Seq.fromList (next_nodes node maximizingPlayer)
@@ -108,8 +167,13 @@ struct
                 else loop 0 alpha beta Real.posInf NONE
             end
 
+<<<<<<< HEAD
     fun pvs_search node depth maximizingPlayer alpha beta evaluate next_nodes next_state =
         if depth = 0 then evaluate node
+=======
+    fun pvs_search node depth maximizingPlayer alpha beta evaluate =
+        if depth = 0 then evaluate node maximizingPlayer
+>>>>>>> 370ddabc232b6e93683461aa9b82eaeb32d9f6bb
         else
             let
                 val moves = Seq.fromList (next_nodes node maximizingPlayer)
