@@ -354,11 +354,11 @@ struct
                         ,
                         fn () =>
                         ForkJoin.par (fn () =>
-                            if knight then generate_knight_moves n ooc_white else []
+                            if knight then generate_knight_moves n occ_black else []
                             ,
                             fn () =>
                             ForkJoin.par (fn () =>
-                                if king then generate_king_moves k ooc_white else []
+                                if king then generate_king_moves k occ_black else []
                                 ,
                                 fn () =>
                                 ForkJoin.par (fn () =>
