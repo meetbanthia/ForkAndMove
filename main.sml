@@ -60,7 +60,7 @@ struct
         if use_alphabeta then
             Search.alpha_beta_search board depth maximizing_player Real.negInf Real.posInf Search.eval_position MoveGenerator.generate_ordered_moves MoveGenerator.apply_move
         else
-            Search.minimax board depth maximizing_player Search.eval_position MoveGenerator.apply_move MoveGenerator.generate_ordered_moves
+            Search.minimax_full_parallel board depth maximizing_player Search.eval_position MoveGenerator.apply_move MoveGenerator.generate_ordered_moves
 
     fun run () =
         let

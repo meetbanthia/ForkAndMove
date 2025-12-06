@@ -6,7 +6,7 @@ sig
     val eval_position: Board.brep -> bool -> real
 
 (* node depth maximizingPlayer alpha beta evaluate *)
-    val minimax: Board.brep -> int -> bool -> (Board.brep -> bool -> real) -> (Board.brep -> MoveGenerator.move -> Board.brep) -> (Board.brep -> bool -> MoveGenerator.move list) -> (real * ((MoveGenerator.move) option))
+    val minimax_full_parallel: Board.brep -> int -> bool -> (Board.brep -> bool -> real) -> (Board.brep -> MoveGenerator.move -> Board.brep) -> (Board.brep -> bool -> MoveGenerator.move list) -> (real * ((MoveGenerator.move) option))
     val alpha_beta_search: 'a -> int -> bool -> real -> real -> ('a -> bool -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> real * 'b option
 end =
 struct
