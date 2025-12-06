@@ -10,3 +10,4 @@ test
 *~
 *.swp
 .DS_Store
+foo.sml

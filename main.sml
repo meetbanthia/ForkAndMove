@@ -65,7 +65,7 @@ struct
     fun run () =
         let
             (* Default FEN: Standard starting position *)
-            val default_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            val default_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq"
             
             (* Parse command line args *)
             val fen_arg = CommandLineArgs.parseString "fen" ""
@@ -112,22 +112,24 @@ struct
 
         (* Initialize board *)
         val board0 = fen_to_board fen
+        val _ = Board.print_board board0
 
         (* Recursive loop to play the game *)
         fun game_loop board turn iter limit =
             if iter > limit then ()
             else
             let
-                val _ = Board.print_board board
                 val _ = print ("\n" ^ (if turn then "White" else "Black") ^ "'s move (Depth " ^ Int.toString depth ^ ")...\n")
                 val (score, best_move_opt) = find_best_move board depth turn use_alphabeta
             in
                 case best_move_opt of
                     SOME m =>
                         let
-                            val _ = print ("Move chosen: " ^ move_to_string m ^ "\n")
+                            val _ = print ("\n" ^ "Move chosen: " ^ move_to_string m ^ "\n")
                             val _ = print ("Score: " ^ Real.toString score ^ "\n")
                             val new_board = MoveGenerator.apply_move board m
+                            val _ = print "\n"
+                            val _ = Board.print_board new_board
                         in
                             game_loop new_board (not turn) (iter + 1) limit
                         end
@@ -136,7 +138,7 @@ struct
                          ())
             end
     in
-        game_loop board0 is_white 0 moves
+        game_loop board0 is_white 1 moves
     end
 end
 
