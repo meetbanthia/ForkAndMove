@@ -6,8 +6,9 @@ sig
     val eval_position: Board.brep -> bool -> real
 
 (* node depth maximizingPlayer alpha beta evaluate *)
-    val minimax_full_parallel: Board.brep -> int -> bool -> (Board.brep -> bool -> real) -> (Board.brep -> MoveGenerator.move -> Board.brep) -> (Board.brep -> bool -> MoveGenerator.move list) -> (real * ((MoveGenerator.move) option))
-    val alpha_beta_search: 'a -> int -> bool -> real -> real -> ('a -> bool -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> real * 'b option
+    val minimax: Board.brep -> int -> bool -> (Board.brep -> bool -> real) -> (Board.brep -> MoveGenerator.move -> Board.brep) -> (Board.brep -> bool -> MoveGenerator.move list) -> (real * ((MoveGenerator.move) option))
+    val alpha_beta_search: Board.brep -> int -> bool -> real -> real -> (Board.brep -> bool -> real) -> (Board.brep -> bool -> MoveGenerator.move list) -> (Board.brep -> MoveGenerator.move -> Board.brep) -> (real * ((MoveGenerator.move) option))
+    (* val alpha_beta_search: 'a -> int -> bool -> real -> real -> ('a -> bool -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> real * 'b option *)
 end =
 struct
 
@@ -164,7 +165,7 @@ struct
                         (#1 (Seq.nth best_scores_and_moves best_move_idx), SOME (Seq.nth move_order best_move_idx))
                 end 
 
-    fun minimax_evaluate_parallel node depth maximizingPlayer evaluate apply_move order =
+    fun minimax node depth maximizingPlayer evaluate apply_move order =
             if depth = 0 then 
                 (evaluate node maximizingPlayer, NONE)
             else
@@ -175,12 +176,12 @@ struct
 
                     val move_order = Seq.fromList mo
                     val len = Seq.length move_order
-                    val _ = print ((Int.toString len) ^ " ")
+                    (* val _ = print ((Int.toString len) ^ " ") *)
                     (* val _ = print ("Generated Move Ordering" ^ "\n") *)
 
                     val child_boards = Seq.map (fn(i) => apply_move node i) move_order
 
-                    fun f i = #1 (minimax_evaluate_parallel i (depth-1) next_turn evaluate apply_move order)
+                    fun f i = #1 (minimax i (depth-1) next_turn evaluate apply_move order)
                     (* val _ = print( "Searching for all childrens" ^ "\n") *)
                     val best_scores = if depth = 1 then  Seq.map f child_boards
                                       else Seq.fromList (List.map f (Seq.toList child_boards))
@@ -193,7 +194,7 @@ struct
                                         val sa = Seq.nth best_scores a
                                         val sb = Seq.nth best_scores b
                                     in
-                                        if sa>sb then a
+                                        if sa>=sb then a
                                         else b
                                     end
                                 ) 
@@ -205,7 +206,7 @@ struct
                                         val sa = Seq.nth best_scores a
                                         val sb = Seq.nth best_scores b
                                     in
-                                        if sa<sb then a
+                                        if sa<=sb then a
                                         else b
                                     end
                                 ) 
@@ -217,10 +218,11 @@ struct
                         if maximizingPlayer then (Real.negInf, NONE) else (Real.posInf, NONE)
                     else
                         ((Seq.nth best_scores best_move_idx), SOME (Seq.nth move_order best_move_idx))
-                end 
+                end
+
 
     
-    fun alpha_beta_search (node : 'a) depth maximizingPlayer alpha beta (evaluate : 'a -> bool -> real) (next_nodes : 'a -> bool -> 'b list) (next_state : 'a -> 'b -> 'a) =
+    (* fun alpha_beta_search (node : 'a) depth maximizingPlayer alpha beta (evaluate : 'a -> bool -> real) (next_nodes : 'a -> bool -> 'b list) (next_state : 'a -> 'b -> 'a) =
         if depth = 0 then (evaluate node maximizingPlayer, NONE)
         else
             let
@@ -246,6 +248,46 @@ struct
             in
                 if maximizingPlayer then loop 0 alpha beta Real.negInf NONE
                 else loop 0 alpha beta Real.posInf NONE
+            end *)
+
+    fun alpha_beta_search node depth maximizingPlayer alpha beta evaluate order apply_move =
+        if depth = 0 then (evaluate node maximizingPlayer, NONE)
+        else
+            let
+                val moves = Seq.fromList (order node maximizingPlayer)
+                val childs = Seq.map (fn i => apply_move node i) moves
+
+                fun loop i a b bci bcs iswhite =
+                    if i >= Seq.length childs then (bcs, bci)
+                    else
+                        let
+                            val ithchild = Seq.nth childs i
+                            val (ithchild_score, _) = alpha_beta_search ithchild (depth-1) (not iswhite) a b evaluate order apply_move
+
+                            val (new_bci, new_bcs) = 
+                                    if ((iswhite andalso ithchild_score > bcs) orelse (not iswhite andalso ithchild_score < bcs)) then 
+                                        (i,ithchild_score) 
+                                    else 
+                                        (bci, bcs)
+
+                            val (new_a, new_b) =
+                                    if (iswhite andalso ithchild_score > a) then
+                                        (ithchild_score, b)
+                                    else if (not iswhite andalso ithchild_score < b) then
+                                        (a, ithchild_score)
+                                    else 
+                                        (a,b)
+                        in
+                            if new_a >= new_b then (new_bcs, new_bci) 
+                            else loop (i+1) new_a new_b new_bci new_bcs iswhite
+                        end
+
+
+                val bs_init = if maximizingPlayer then Real.negInf else Real.posInf
+                val (bs, bm_index) = loop 0 alpha beta ~1 bs_init maximizingPlayer
+                val bm = if bm_index = ~1 then NONE else SOME( Seq.nth moves bm_index)
+            in
+                (bs, bm)
             end
 
     fun pvs_search node depth maximizingPlayer alpha beta evaluate next_nodes next_state =
