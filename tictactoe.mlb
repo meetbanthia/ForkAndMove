@@ -1,0 +1,10 @@
+lib/github.com/mpllang/mpllib/sources.mpl.mlb
+lib-local/sources.mpl.mlb
+Board.sml
+MoveGenerator.sml
+PieceList.sml
+MoveGeneratorPL.sml
+PieceTable.sml
+Search.sml
+TicTacToeCode/TicTacToeBoard.sml
+TicTacToeCode/TicTacToeMoveGenerator.sml

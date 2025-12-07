@@ -56,9 +56,11 @@ struct
     fun has_flag key =
         List.exists (fn s => s = ("-" ^ key)) (CommandLine.arguments())
 
-    fun find_best_move board depth maximizing_player use_alphabeta =
+    fun find_best_move board depth maximizing_player use_alphabeta use_pvs =
         if use_alphabeta then
             Search.alpha_beta_search board depth maximizing_player Real.negInf Real.posInf Search.eval_position MoveGenerator.generate_ordered_moves MoveGenerator.apply_move
+        else if use_pvs then
+            Search.pvs_search board depth maximizing_player Real.negInf Real.posInf Search.eval_position MoveGenerator.generate_ordered_moves MoveGenerator.apply_move
         else
             Search.minimax board depth maximizing_player Search.eval_position MoveGenerator.apply_move MoveGenerator.generate_ordered_moves
 
@@ -72,9 +74,11 @@ struct
             val file_arg = CommandLineArgs.parseString "file" ""
             val depth = CommandLineArgs.parseInt "depth" 4
             val moves = CommandLineArgs.parseInt "moves" 10
+            val proc_count = CommandLineArgs.parseInt "procs" 1
             
             (* Search algorithm flags *)
             val use_alphabeta = has_flag "alphabeta"
+            val use_pvs = has_flag "pvs"
             val use_minimax = has_flag "minimax" (* Explicit flag, though currently default *)
             
             (* Determine source of FEN *)
@@ -107,7 +111,8 @@ struct
             val _ = print ("FEN: " ^ minimal_fen ^ "\n")
             val _ = print ("Turn: " ^ (if is_white then "White" else "Black") ^ "\n")
             val _ = print ("Depth: " ^ Int.toString depth ^ "\n")
-            val _ = print ("Algorithm: " ^ (if use_alphabeta then "Alpha-Beta" else "Minimax") ^ "\n")
+            val _ = print ("Algorithm: " ^ (if use_alphabeta then "Alpha-Beta" else if use_pvs then "PVS" else "Minimax") ^ "\n")
+            val _ = print ("Procs: " ^ (Int.toString proc_count) ^ "\n")
             val _ = print "========================================\n"
 
             (* Initialize board *)
@@ -120,7 +125,7 @@ struct
                 else
                 let
                     val _ = print ("\n" ^ (if turn then "White" else "Black") ^ "'s move (Depth " ^ Int.toString depth ^ ")...\n")
-                    val (score, best_move_opt) = find_best_move board depth turn use_alphabeta
+                    val (score, best_move_opt) = find_best_move board depth turn use_alphabeta use_pvs
                 in
                     case best_move_opt of
                         SOME m =>
@@ -142,4 +147,20 @@ struct
         end
 end
 
-val _ = Main.run()
+fun choice () =
+    let
+        val args = CommandLine.arguments()
+        val _ = print ("Command-line arguments: " ^ String.concatWith ", " args ^ "\n") (* Debug print *)
+        val run_time = 
+            if (CommandLineArgs.parseInt "mode" 1) = 2 then 
+                TicTacToe.tictactoe 
+            else if (CommandLineArgs.parseInt "mode" 1) = 3 then
+                UltimateTicTacToeMain.ultimatetictactoe
+            else 
+                Main.run
+    in
+        run_time () 
+    end
+
+
+val _ = choice()

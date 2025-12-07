@@ -290,6 +290,43 @@ struct
     fun generate_move_order brep =
         generate_piece_moves brep
 
+
+        fun generate_color_move_order_seq brep white pawn knight bishop rook king queen = 
+        let
+            val (P,R,N,B,K,Q,p,r,n,b,k,q) = brep
+            val (ooc_white, occ_black) = occupancy (P,R,N,B,K,Q,p,r,n,b,k,q)
+            (* White moves *)
+            val w_p_moves = if white then generate_pawn_moves P ooc_white occ_black true else []
+            val w_n_moves = if white then generate_knight_moves N ooc_white else []
+            val w_k_moves = if white then generate_king_moves K ooc_white else []
+            val w_r_moves = if white then generate_sliding_moves R ooc_white occ_black true rook_moves else []
+            val w_b_moves = if white then generate_sliding_moves B ooc_white occ_black true bishop_moves else []
+            val w_q_moves = if white then generate_sliding_moves Q ooc_white occ_black true queen_moves else []
+
+            (* Black moves *)
+            val b_P_moves = if not white then generate_pawn_moves p ooc_white occ_black false else []
+            val b_N_moves = if not white then generate_knight_moves n occ_black else []
+            val b_K_moves = if not white then generate_king_moves k occ_black else []
+            val b_R_moves = if not white then generate_sliding_moves r ooc_white occ_black false rook_moves else []
+            val b_B_moves = if not white then generate_sliding_moves b ooc_white occ_black false bishop_moves else []
+            val b_Q_moves = if not white then generate_sliding_moves q ooc_white occ_black false queen_moves else []
+
+        in
+                w_p_moves
+                @  w_n_moves 
+                @  w_k_moves 
+                @  w_r_moves 
+                @  w_b_moves 
+                @  w_q_moves 
+                @  b_P_moves 
+                @  b_N_moves 
+                @  b_K_moves 
+                @  b_R_moves 
+                @  b_B_moves 
+                @  b_Q_moves 
+        end
+
+
     fun generate_color_move_order brep white pawn knight bishop rook king queen = 
         let
             val (P,R,N,B,K,Q,p,r,n,b,k,q) = brep
@@ -514,8 +551,7 @@ struct
             val kingPos = case kingSq of [x] => x | _ => (0,0)
 
             val oppMoves =
-                generate_color_move_order brep (not isWhite)
-                    true true true true true true
+                generate_color_move_order brep (not isWhite) true true true true true true
 
             fun attacksKing (_,toSq) = toSq = kingPos
         in
@@ -535,10 +571,8 @@ struct
             val score_init = 0
 
             (* A: Checkmate / check *)
-            val oppMoves = generate_color_move_order base_after (not isWhite)
-                            true true true true true true
-            val myMoves  = generate_color_move_order base_after isWhite
-                            true true true true true true
+            val oppMoves = generate_color_move_order base_after (not isWhite) true true true true true true
+            val myMoves  = generate_color_move_order base_after isWhite true true true true true true
 
             val isCheckmateOpp = (length oppMoves = 0) andalso king_in_check base_after (not isWhite)
             val isCheckOpp     = king_in_check base_after (not isWhite)
@@ -563,9 +597,6 @@ struct
             val oppPieces =
                 if isWhite then [p2,n2,b2,r2,q2] else [P2,N2,B2,R2,Q2]
 
-            val oppMovesAfter =
-                generate_color_move_order base_after (not isWhite)
-                    true true true true true true
 
             fun threatenedOwn () =
                 let
@@ -573,19 +604,15 @@ struct
                         let val idx = coord_to_index toSq
                             val bb = Word64.<<(0w1, Word.fromInt idx)
                         in List.exists (fn pbb => Word64.andb(bb,pbb)<>0w0) myPieces end
-                in List.filter anyThreat oppMovesAfter end
+                in List.filter anyThreat oppMoves end
 
             fun threatenedOpp () =
                 let
-                    val myMovesAfter =
-                        generate_color_move_order base_after isWhite
-                            true true true true true true
-
                     fun anyThreat (_,toSq) =
                         let val idx = coord_to_index toSq
                             val bb = Word64.<<(0w1, Word.fromInt idx)
                         in List.exists (fn pbb => Word64.andb(bb,pbb)<>0w0) oppPieces end
-                in List.filter anyThreat myMovesAfter end
+                in List.filter anyThreat myMoves end
 
             val threatenedOppValue =
                 foldl (fn ((_,sq),acc) =>
@@ -669,7 +696,8 @@ struct
 
     fun generate_ordered_moves board isWhite =
      let 
-        val moves = generate_color_move_order board isWhite true true true true true true
+        val proc_count = CommandLineArgs.parseInt "procs" 1
+        val moves = if proc_count = 1 then generate_color_move_order board isWhite true true true true true true else generate_color_move_order_seq board isWhite true true true true true true
         val sorted = order_moves board isWhite moves
      in
         List.map #2 sorted

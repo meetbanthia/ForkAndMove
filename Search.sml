@@ -6,8 +6,13 @@ sig
     val eval_position: Board.brep -> bool -> real
 
 (* node depth maximizingPlayer alpha beta evaluate *)
-    val minimax: Board.brep -> int -> bool -> (Board.brep -> bool -> real) -> (Board.brep -> MoveGenerator.move -> Board.brep) -> (Board.brep -> bool -> MoveGenerator.move list) -> (real * ((MoveGenerator.move) option))
-    val alpha_beta_search: Board.brep -> int -> bool -> real -> real -> (Board.brep -> bool -> real) -> (Board.brep -> bool -> MoveGenerator.move list) -> (Board.brep -> MoveGenerator.move -> Board.brep) -> (real * ((MoveGenerator.move) option))
+    val minimax: 'a -> int -> bool -> ('a -> bool -> real) -> ('a -> 'b -> 'a) -> ('a -> bool -> 'b list) -> (real * (('b) option))
+    val alpha_beta_search: 'a -> int -> bool -> real -> real -> ('a -> bool -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> (real * (('b) option))
+    val pvs_search: 'a -> int -> bool -> real -> real -> ('a -> bool -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> (real * (('b) option))
+    val minimax_full_parallel_ttt : 'a -> int -> bool -> ('a -> bool -> real) -> ('a -> 'b -> bool -> 'a) -> ('a -> bool -> 'b list) -> (real * ('b option))
+    val alpha_beta_search_ttt : 'a -> int -> bool -> real -> real -> ('a -> bool -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> bool -> 'a) -> (real * ('b option))
+    val pvs_search_ttt : 'a -> int -> bool -> real -> real -> ('a -> bool -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> bool -> 'a) -> (real * ('b option))
+
     (* val alpha_beta_search: 'a -> int -> bool -> real -> real -> ('a -> bool -> real) -> ('a -> bool -> 'b list) -> ('a -> 'b -> 'a) -> real * 'b option *)
 end =
 struct
@@ -290,14 +295,14 @@ struct
                 (bs, bm)
             end
 
-    fun pvs_search node depth maximizingPlayer alpha beta evaluate next_nodes next_state =
+    fun pvs_search_no_move node depth maximizingPlayer alpha beta evaluate next_nodes next_state =
         if depth = 0 then evaluate node maximizingPlayer
         else
             let
                 val moves = Seq.fromList (next_nodes node maximizingPlayer)
                 val child_nodes = Seq.map (fn(x) => next_state node x) moves
                 val left_most_node = Seq.nth child_nodes 0
-                val score1 = pvs_search left_most_node (depth-1) (not maximizingPlayer) alpha beta evaluate next_nodes next_state
+                val score1 = pvs_search_no_move left_most_node (depth-1) (not maximizingPlayer) alpha beta evaluate next_nodes next_state
                 val rest_scores = Seq.map (fn(x) => alpha_beta_search x (depth-1) (not maximizingPlayer) alpha beta evaluate next_nodes next_state) child_nodes
                 val rest_scores = Seq.map #1 rest_scores
                 val (a,b) = if maximizingPlayer then (Real.max(score1,alpha), beta) else (alpha, Real.min(beta, score1))
@@ -305,4 +310,214 @@ struct
             in
                 Parallel.reduce (fn(a,b) => f(a,b)) (Real.fromInt 0) (1,Seq.length child_nodes) (fn(i) => Seq.nth rest_scores i)
             end
+
+    fun pvs_search node depth maximizingPlayer alpha beta evaluate order apply_move =
+    if depth = 0 then
+        (evaluate node maximizingPlayer, NONE)
+    else
+        case (order node maximizingPlayer) of [] => 
+            (evaluate node maximizingPlayer, NONE)
+            | left_move :: rest_moves =>
+            let
+                val left_child = apply_move node left_move
+                val sibling_seq = Seq.fromList rest_moves
+                val n = Seq.length sibling_seq
+
+                val (pv_score, _) = pvs_search left_child (depth-1) (not maximizingPlayer) alpha beta evaluate order apply_move
+
+                val (a0, b0) = if maximizingPlayer then (Real.max(alpha, pv_score), beta) else (alpha, Real.min(beta, pv_score))
+
+                val bestScore0 = pv_score
+                val bestMove0  = left_move
+
+                val cutoff = (a0 >= b0)
+                val best_sib_opt =
+                    if cutoff orelse n = 0 then NONE
+                    else
+                        let
+                            val (best_sc, best_idx) =
+                            Parallel.reduce
+                                (fn ((s1: real,i1),(s2: real,i2)) =>
+                                    if maximizingPlayer then
+                                        case Real.compare (s1, s2) of
+                                            GREATER => (s1, i1)
+                                        | EQUAL   => if i1 < i2 then (s1, i1) else (s2, i2)
+                                        | LESS    => (s2, i2)
+                                    else
+                                        case Real.compare (s1, s2) of
+                                            LESS => (s1, i1)
+                                        | EQUAL   => if i1 < i2 then (s1, i1) else (s2, i2)
+                                        |  GREATER  => (s2, i2)
+                                )
+                                    (if maximizingPlayer then Real.negInf else Real.posInf, ~1)
+                                    (0, n)
+                                    (fn i =>
+                                        let
+                                            val child = apply_move node (Seq.nth sibling_seq i)
+                                            val (score, _) = alpha_beta_search child (depth-1) (not maximizingPlayer) a0 b0 evaluate order apply_move
+                                        in
+                                            (score, i)
+                                        end
+                                    )
+                        in
+                            if best_idx = ~1 then NONE else SOME (best_sc, Seq.nth sibling_seq best_idx)
+                        end
+
+                val (final_score, final_move) =
+                    case best_sib_opt of
+                    NONE => (bestScore0, SOME bestMove0)
+                    | SOME (sib_score, sib_move) =>
+                            if maximizingPlayer then
+                                if sib_score > bestScore0 then (sib_score, SOME sib_move)
+                                else (bestScore0, SOME bestMove0)
+                            else
+                                if sib_score < bestScore0 then (sib_score, SOME sib_move)
+                                else (bestScore0, SOME bestMove0)
+
+            in
+                (final_score, final_move)
+            end
+
+fun minimax_full_parallel_ttt node depth maximizingPlayer evaluate (apply_move : 'a -> 'b -> bool -> 'a) order =
+    if depth = 0 then (evaluate node maximizingPlayer, NONE)
+    else
+        let
+            val next_turn = not maximizingPlayer
+            val moves = order node maximizingPlayer
+            val move_seq = Seq.fromList moves
+
+            val child_boards = Seq.map (fn m => apply_move node m maximizingPlayer) move_seq
+            val child_results = Seq.map (fn b => minimax_full_parallel_ttt b (depth-1) next_turn evaluate apply_move order) child_boards
+            val n = Seq.length child_results
+
+            val best_idx =
+                if maximizingPlayer then
+                    Parallel.reduce
+                        (fn (i,j) =>
+                            let
+                                val (si,_) = Seq.nth child_results i
+                                val (sj,_) = Seq.nth child_results j
+                            in if si >= sj then i else j end)
+                        (~1) (0,n) (fn k => k)
+                else
+                    Parallel.reduce
+                        (fn (i,j) =>
+                            let
+                                val (si,_) = Seq.nth child_results i
+                                val (sj,_) = Seq.nth child_results j
+                            in if si <= sj then i else j end)
+                        (~1) (0,n) (fn k => k)
+        in
+            if best_idx = ~1 then
+                if maximizingPlayer then (Real.negInf, NONE) else (Real.posInf, NONE)
+            else
+                let
+                    val (score,_) = Seq.nth child_results best_idx
+                    val best_move = Seq.nth move_seq best_idx
+                in
+                    (score, SOME best_move)
+                end
+        end
+
+fun alpha_beta_search_ttt node depth maximizingPlayer alpha beta evaluate (order : 'a -> bool -> 'b list) (apply_move : 'a -> 'b -> bool -> 'a) =
+    if depth = 0 then (evaluate node maximizingPlayer, NONE)
+    else
+        let
+            val moves = order node maximizingPlayer
+            val move_seq = Seq.fromList moves
+
+            fun loop i a b best_idx best_score =
+                if i >= Seq.length move_seq then (best_score, best_idx)
+                else
+                    let
+                        val m = Seq.nth move_seq i
+                        val child = apply_move node m maximizingPlayer
+                        val (score, _) = alpha_beta_search_ttt child (depth-1) (not maximizingPlayer) a b evaluate order apply_move
+
+                        val (new_best_score, new_best_idx) =
+                            if maximizingPlayer then
+                                if score >= best_score then (score, i) else (best_score, best_idx)
+                            else
+                                if score <= best_score then (score, i) else (best_score, best_idx)
+
+                        val new_alpha = if maximizingPlayer then Real.max(a, score) else a
+                        val new_beta  = if not maximizingPlayer then Real.min(b, score) else b
+                    in
+                        if new_alpha >= new_beta then (new_best_score, new_best_idx)
+                        else loop (i+1) new_alpha new_beta new_best_idx new_best_score
+                    end
+
+            val init_score = if maximizingPlayer then Real.negInf else Real.posInf
+            val (best_score_idx_score, best_idx) = loop 0 alpha beta ~1 init_score
+        in
+            if best_idx = ~1 then (init_score, NONE)
+            else (best_score_idx_score, SOME (Seq.nth move_seq best_idx))
+        end
+
+fun pvs_search_ttt node depth maximizingPlayer alpha beta evaluate (order : 'a -> bool -> 'b list) (apply_move : 'a -> 'b -> bool -> 'a) =
+    if depth = 0 then (evaluate node maximizingPlayer, NONE)
+    else
+        case order node maximizingPlayer of
+            [] => (evaluate node maximizingPlayer, NONE)
+          | first_move :: rest_moves =>
+            let
+                val first_child = apply_move node first_move maximizingPlayer
+                val (first_score, _) = pvs_search_ttt first_child (depth-1) (not maximizingPlayer) alpha beta evaluate order apply_move
+
+                val (a0,b0) =
+                    if maximizingPlayer then (Real.max(alpha, first_score), beta)
+                    else (alpha, Real.min(beta, first_score))
+
+                val bestScore0 = first_score
+                val bestMove0  = first_move
+
+                val sibling_seq = Seq.fromList rest_moves
+                val n = Seq.length sibling_seq
+
+            val best_sib_opt =
+                    let
+                        val (best_sc, best_idx) =
+                            Parallel.reduce
+                                (fn ((s1: real,i1),(s2: real,i2)) =>
+                                    if maximizingPlayer then
+                                        case Real.compare (s1, s2) of
+                                            GREATER => (s1, i1)
+                                        | EQUAL   => if i1 < i2 then (s1, i1) else (s2, i2)
+                                        | LESS    => (s2, i2)
+                                    else
+                                        case Real.compare (s1, s2) of
+                                            LESS => (s1, i1)
+                                        | EQUAL   => if i1 < i2 then (s1, i1) else (s2, i2)
+                                        |  GREATER  => (s2, i2)
+                                )
+                                (if maximizingPlayer then Real.negInf else Real.posInf, ~1)
+                                (0, n)
+                                (fn i =>
+                                    let
+                                        val move = Seq.nth sibling_seq i
+                                        val child = apply_move node move maximizingPlayer
+                                        val (score, _) = alpha_beta_search_ttt child (depth-1) (not maximizingPlayer) a0 b0 evaluate order apply_move
+                                    in
+                                        (score, i)
+                                    end
+                                )
+                    in
+                        if best_idx = ~1 then NONE
+                        else SOME (best_sc, Seq.nth sibling_seq best_idx)
+                    end
+                val (final_score, final_move) =
+                    case best_sib_opt of
+                        NONE => (bestScore0, SOME bestMove0)
+                      | SOME (sib_score, sib_move) =>
+                        if maximizingPlayer then
+                            if sib_score > bestScore0 then (sib_score, SOME sib_move)
+                            else (bestScore0, SOME bestMove0)
+                        else
+                            if sib_score < bestScore0 then (sib_score, SOME sib_move)
+                            else (bestScore0, SOME bestMove0)
+            in
+                (final_score, final_move)
+            end
+
+
 end

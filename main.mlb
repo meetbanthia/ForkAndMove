@@ -6,4 +6,10 @@ PieceList.sml
 MoveGeneratorPL.sml
 PieceTable.sml
 Search.sml
+TicTacToeCode/TicTacToeBoard.sml
+TicTacToeCode/TicTacToeMoveGenerator.sml
+TicTacToeCode/UltimateTicTacToeBoard.sml
+TicTacToeCode/UltimateTicTacToeMoveGen.sml
+TicTacToeCode/UltimateTicTacToe.sml
+TicTacToeCode/TicTacToe.sml
 main.sml
