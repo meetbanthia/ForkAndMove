@@ -72,31 +72,19 @@ Then run:
 
 Run a game with Alpha-Beta pruning at depth 6 for 20 moves:
 ```bash
-./main -alphabeta -depth 6 -moves 20
+./main @mpl -- -alphabeta -depth 6 -moves 20
 ```
 
-Run an Ultimate TicTacToe game with PVS search at depth 4 for 100 moves:
+Run an Ultimate TicTacToe game with PVS search at depth 4 for 100 moves on 8 processors:
 ```bash
-./main -pvs -depth 4 -moves 100 -mode 3
+./main @mpl procs 8 -- -pvs -depth 4 -moves 100 -mode 3
 ```
 
 ## Verification
 
-To verify the correctness of the Alpha-Beta implementation, you can run both the Minimax and Alpha-Beta algorithms on the same game configuration and diff their outputs. Since both should yield the same best moves (just with different performance), their outputs should match identically except for the algorithm name.
+To verify the correctness of the Alpha-Beta implementation, you can run both the Minimax and Alpha-Beta algorithms on the same game configuration and diff their outputs. Since both should yield the same best moves (just with different performance), the moves generated should match.
 
-Run the following command:
-```bash
-./main @mpl procs 64 -- -depth 4 -moves 1 -alphabeta > ab.txt && ./main @mpl procs 64 -- -depth 4 -moves 1 -minimax > mm.txt && diff ab.txt mm.txt
-```
 
-**Expected Output:**
-The `diff` command should report only a single line difference corresponding to the algorithm name printed in the header:
-```
-7c7
-< Algorithm: Alpha-Beta
----
-> Algorithm: Minimax
-```
 
 ## Current Status
 - **Core**: Bitboard representation and move generation are fully implemented.
