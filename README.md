@@ -63,8 +63,9 @@ Then run:
 | `-file <path>` | Read FEN string from a file. | None |
 | `-depth <n>` | Set the search depth for the AI. | 4 |
 | `-moves <n>` | Set the maximum number of moves to simulate in the game loop. | 10 |
-| `-alphabeta` | Use the **Alpha-Beta Pruning** search algorithm. | Disabled (Minimax used) |
+| `-alphabeta` | Use the **Alpha-Beta Pruning** search algorithm. | Disabled (Minimax used by default) |
 | `-minimax` | Use the **Minimax** search algorithm. | Enabled (Default) |
+| `-pvs` | Use the **Principal Variation Splitting** search algorithm. | Disabled (Minimaxed used by default) |
 | `-mode` | Optional flag for game mode. By default it is set to chess (2 for TicTacToe and 3 for Ultimate TicTacToe) | Enabled (Default) |
 
 **Examples:**
