@@ -14,8 +14,8 @@ ForkAndMove is a chess engine built to leverage the parallelism features of the 
 
 - **`Board.sml`**: Defines the bitboard representation (`brep`) and utilities for board manipulation and printing.
 - **`MoveGenerator.sml`**: Implements move generation logic for all pieces using bitwise operations.
-- **`Search.sml`**: Contains the search algorithms (`alpha_beta_search`, `minimax`) and evaluation function.
-- **`main.sml`**: Entry point for the engine. Handles FEN input, invokes the search, and displays results.
+- **`Search.sml`**: Contains the search algorithms (`alpha_beta_search`, `minimax`, `pvs_search`) and evaluation function.
+- **`main.sml`**: Entry point for the engine. Handles FEN input, invokes the search, and displays results. By default runs chess.
 - **`PieceTable.sml`**: Piece-square tables for static board evaluation.
 - **`lib/` & `lib-local/`**: MPL library dependencies and local helpers.
 
@@ -65,6 +65,7 @@ Then run:
 | `-moves <n>` | Set the maximum number of moves to simulate in the game loop. | 10 |
 | `-alphabeta` | Use the **Alpha-Beta Pruning** search algorithm. | Disabled (Minimax used) |
 | `-minimax` | Use the **Minimax** search algorithm. | Enabled (Default) |
+| `-mode` | Optional flag for game mode. By default it is set to chess (2 for TicTacToe and 3 for Ultimate TicTacToe) | Enabled (Default) |
 
 **Examples:**
 
