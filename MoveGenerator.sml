@@ -10,9 +10,10 @@ structure MoveGenerator : sig
 end = 
 struct
     type move = ((int*int) * (int*int))
+    val proc_count = CommandLineArgs.parseInt "procs" 1
+
 
     (* --- Bitboard masks --- *)
-
     (* Files: a-h *)
     val file_a : Word64.word = 0wx0101010101010101
     val file_b : Word64.word = 0wx0202020202020202
@@ -69,11 +70,11 @@ struct
 
     (* --- Convert bit index to (row,col) --- *)
 
-    fun indexToCoord i = (7 - (i div 8), 7 - (i mod 8))
-    fun coord_to_index (r,c) = (7-r)*8 + (7-c)
+    fun  indexToCoord i = (7 - (i div 8), 7 - (i mod 8))
+    fun  coord_to_index (r,c) = (7-r)*8 + (7-c)
 
     (* --- Get occupancy bitboards --- *)
-    fun occupancy (P,R,N,B,K,Q,p,r,n,b,k,q) =
+    fun  occupancy (P,R,N,B,K,Q,p,r,n,b,k,q) =
         let
             val white = Word64.orb(P, Word64.orb(R, Word64.orb(N, Word64.orb(B, Word64.orb(K,Q)))))
             val black = Word64.orb(p, Word64.orb(r, Word64.orb(n, Word64.orb(b, Word64.orb(k,q)))))
@@ -551,7 +552,7 @@ struct
             val kingPos = case kingSq of [x] => x | _ => (0,0)
 
             val oppMoves =
-                generate_color_move_order brep (not isWhite) true true true true true true
+                generate_color_move_order_seq brep (not isWhite) true true true true true true
 
             fun attacksKing (_,toSq) = toSq = kingPos
         in
@@ -571,8 +572,8 @@ struct
             val score_init = 0
 
             (* A: Checkmate / check *)
-            val oppMoves = generate_color_move_order base_after (not isWhite) true true true true true true
-            val myMoves  = generate_color_move_order base_after isWhite true true true true true true
+            val oppMoves = if proc_count = 1 then generate_color_move_order base_after (not isWhite) true true true true true true else generate_color_move_order_seq base_after (not isWhite) true true true true true true
+            val myMoves  = if proc_count = 1 then generate_color_move_order base_after isWhite true true true true true true else generate_color_move_order_seq base_after isWhite true true true true true true
 
             val isCheckmateOpp = (length oppMoves = 0) andalso king_in_check base_after (not isWhite)
             val isCheckOpp     = king_in_check base_after (not isWhite)
@@ -640,29 +641,29 @@ struct
         end
 
 
-    fun merge ([], ys) = ys
-    | merge (xs, []) = xs
-    | merge ((x as (s1,_))::xs1, (y as (s2,_))::ys1) =
+    fun  merge ([], ys) = ys
+    |  merge (xs, []) = xs
+    |  merge ((x as (s1,_))::xs1, (y as (s2,_))::ys1) =
             if s1 >= s2 then
                 x :: merge(xs1, y::ys1)
             else
                 y :: merge(x::xs1, ys1)
 
     (* split list into two halves *)
-    fun split xs =
+    fun  split xs =
         let
-            fun take (0, acc, rest) = (List.rev acc, rest)
-            | take (n, acc, x::rest) = take (n-1, x::acc, rest)
-            | take (_, acc, []) = (List.rev acc, [])
+            fun  take (0, acc, rest) = (List.rev acc, rest)
+            |  take (n, acc, x::rest) = take (n-1, x::acc, rest)
+            |  take (_, acc, []) = (List.rev acc, [])
             val n = length xs div 2
         in
             take (n, [], xs)
         end
 
     (* stable mergesort for lists of (score, move) pairs *)
-    fun msort [] = []
-    | msort [x] = [x]
-    | msort xs =
+    fun  msort [] = []
+    |  msort [x] = [x]
+    |  msort xs =
             let
                 val (l, r) = split xs
             in
@@ -696,7 +697,6 @@ struct
 
     fun generate_ordered_moves board isWhite =
      let 
-        val proc_count = CommandLineArgs.parseInt "procs" 1
         val moves = if proc_count = 1 then generate_color_move_order board isWhite true true true true true true else generate_color_move_order_seq board isWhite true true true true true true
         val sorted = order_moves board isWhite moves
      in
