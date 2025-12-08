@@ -18,6 +18,8 @@ ForkAndMove is a chess engine built to leverage the parallelism features of the 
 - **`main.sml`**: Entry point for the engine. Handles FEN input, invokes the search, and displays results. By default runs chess.
 - **`PieceTable.sml`**: Piece-square tables for static board evaluation.
 - **`lib/` & `lib-local/`**: MPL library dependencies and local helpers.
+- **`TicTacToe/`** function for holding TicTacToe and Ultimate TicTacToe code
+- **`PieceList.sml` and **`MoveGeneratorPL.sml`** WIP for representing a chess board as a piece list.
 
 ## Getting Started
 
