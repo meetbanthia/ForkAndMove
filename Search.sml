@@ -261,7 +261,6 @@ struct
             let
                 val moves = Seq.fromList (order node maximizingPlayer)
                 val childs = Seq.map (fn i => apply_move node i) moves
-
                 fun loop i a b bci bcs iswhite =
                     if i >= Seq.length childs then (bcs, bci)
                     else
@@ -330,7 +329,9 @@ struct
                 val bestScore0 = pv_score
                 val bestMove0  = left_move
 
-                val cutoff = (a0 >= b0)
+
+
+                val cutoff = (a0 >= b0) orelse (bestScore0 > beta)
                 val best_sib_opt =
                     if cutoff orelse n = 0 then NONE
                     else
@@ -340,14 +341,12 @@ struct
                                 (fn ((s1: real,i1),(s2: real,i2)) =>
                                     if maximizingPlayer then
                                         case Real.compare (s1, s2) of
-                                            GREATER => (s1, i1)
-                                        | EQUAL   => if i1 < i2 then (s1, i1) else (s2, i2)
-                                        | LESS    => (s2, i2)
+                                        LESS    => (s2, i2)
+                                        | _ => (s1, i1)
                                     else
                                         case Real.compare (s1, s2) of
-                                            LESS => (s1, i1)
-                                        | EQUAL   => if i1 < i2 then (s1, i1) else (s2, i2)
-                                        |  GREATER  => (s2, i2)
+                                        GREATER => (s2, i2)
+                                        | _   =>  (s1, i1) 
                                 )
                                     (if maximizingPlayer then Real.negInf else Real.posInf, ~1)
                                     (0, n)
@@ -436,9 +435,9 @@ fun alpha_beta_search_ttt node depth maximizingPlayer alpha beta evaluate (order
 
                         val (new_best_score, new_best_idx) =
                             if maximizingPlayer then
-                                if score >= best_score then (score, i) else (best_score, best_idx)
+                                if score > best_score then (score, i) else (best_score, best_idx)
                             else
-                                if score <= best_score then (score, i) else (best_score, best_idx)
+                                if score < best_score then (score, i) else (best_score, best_idx)
 
                         val new_alpha = if maximizingPlayer then Real.max(a, score) else a
                         val new_beta  = if not maximizingPlayer then Real.min(b, score) else b
@@ -473,8 +472,10 @@ fun pvs_search_ttt node depth maximizingPlayer alpha beta evaluate (order : 'a -
 
                 val sibling_seq = Seq.fromList rest_moves
                 val n = Seq.length sibling_seq
-
+            val cutoff = (a0 >= b0) orelse (bestScore0 > beta)
             val best_sib_opt =
+                    if cutoff orelse n = 0 then NONE
+                    else
                     let
                         val (best_sc, best_idx) =
                             Parallel.reduce
