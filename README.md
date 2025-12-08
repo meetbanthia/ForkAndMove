@@ -66,7 +66,7 @@ Then run:
 | `-alphabeta` | Use the **Alpha-Beta Pruning** search algorithm. | Disabled (Minimax used by default) |
 | `-minimax` | Use the **Minimax** search algorithm. | Enabled (Default) |
 | `-pvs` | Use the **Principal Variation Splitting** search algorithm. | Disabled (Minimaxed used by default) |
-| `-mode` | Optional flag for game mode. By default it is set to chess (2 for TicTacToe and 3 for Ultimate TicTacToe) | Enabled (Default) |
+| `-mode` | Optional flag for game mode. By default it is set to chess (2 for TicTacToe and 3 for Ultimate TicTacToe) | Chess |
 
 **Examples:**
 
