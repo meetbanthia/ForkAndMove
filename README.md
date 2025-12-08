@@ -75,6 +75,11 @@ Run a game with Alpha-Beta pruning at depth 6 for 20 moves:
 ./main -alphabeta -depth 6 -moves 20
 ```
 
+Run an Ultimate TicTacToe game with PVS search at depth 4 for 100 moves:
+```bash
+./main -pvs -depth 4 -moves 100 -mode 3
+```
+
 ## Verification
 
 To verify the correctness of the Alpha-Beta implementation, you can run both the Minimax and Alpha-Beta algorithms on the same game configuration and diff their outputs. Since both should yield the same best moves (just with different performance), their outputs should match identically except for the algorithm name.
