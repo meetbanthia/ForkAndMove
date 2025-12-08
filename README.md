@@ -89,12 +89,20 @@ To verify the correctness of the Alpha-Beta implementation, you can run both the
 
 
 ## Current Status
-- **Core**: Bitboard representation and move generation are fully implemented.
+- **Core**: Bitboard representation and move generation are fully implemented. TicTacToe and Ultimate TicTacToe engines with move ordering and generation are implemented.
 - **Evaluation**: Material counting and threat detection (forks, pins, direct attacks).
-- **Search**: Parallel Minimax and Alpha-Beta pruning implementations are functional.
+- **Search**: Parallel Minimax, PVS, and Alpha-Beta pruning implementations are functional.
 - **Gameplay**: The engine can play against itself or simulate games from a given position.
 
 ## Contributors
 - Meet Banthia - MSCS, NYU Courant
 - Pranav Sharma - MSCS, NYU Courant
 
+## References
+[Parallelizing a simple chess engine](https://www.cs.cmu.edu/afs/cs/academic/class/15418-s12/www/competition/www.contrib.andrew.cmu.edu/~jvirdo/greskamp-2003.pdf)
+
+[Parallel search of strongly ordered game trees](https://doi.org/10.1145/356893.356895)
+
+[Parallel Search - Chess Programming Wiki](https://www.chessprogramming.org/Parallel_Search#ParallelAlphaBeta)
+
+[Principal Variation - Chess Programming Wikie](https://www.chessprogramming.org/Principal_Variation)
