@@ -56,6 +56,13 @@ fun generate_move_order ((a,b,c,d,e,f,g,h,i) : UltimateTicTacToe.board) : (int *
       end
     end
 
+    fun insert (x as (s1, m1)) [] = [x]
+      | insert (x as (s1, m1)) ((s2, m2)::rest) =
+        if s1 >= s2 then x :: (s2, m2)::rest
+        else (s2, m2) :: insert x rest
+
+    fun sort [] = []
+      | sort (x::xs) = insert x (sort xs)
 
   fun order_moves (board: UltimateTicTacToe.board) (isPlayerX: bool) (moves: move list) : (real * move) list =
     let
